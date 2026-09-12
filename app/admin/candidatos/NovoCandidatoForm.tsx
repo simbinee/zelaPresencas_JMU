@@ -29,7 +29,7 @@ export function NovoCandidatoForm() {
   }
 
   return (
-    <div className="rounded-xl border border-navy-900/10 bg-white p-5">
+    <div className="w-full rounded-xl border border-navy-900/10 bg-white p-5">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="font-display text-lg font-semibold text-navy-950">Novo candidato</h3>
         <button

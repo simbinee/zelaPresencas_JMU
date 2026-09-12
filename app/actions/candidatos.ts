@@ -76,3 +76,40 @@ export async function atualizarCandidatoAction(formData: FormData) {
   revalidatePath(`/admin/candidatos/${id}`);
   revalidatePath("/admin/candidatos");
 }
+
+export type AdicionarVariosState = { error?: string; success?: string } | null;
+
+export async function criarCandidatosEmMassaAction(
+  _prev: AdicionarVariosState,
+  formData: FormData
+): Promise<AdicionarVariosState> {
+  await requireAdmin();
+
+  const lista = String(formData.get("lista") || "");
+  const turma = String(formData.get("turma") || "").trim();
+
+  const linhas = lista
+    .split("\n")
+    .map((linha) => linha.trim())
+    .filter(Boolean);
+
+  if (linhas.length === 0) {
+    return { error: "Cola pelo menos um nome, um por linha." };
+  }
+
+  const dados = linhas.map((linha) => {
+    const [nome, contacto] = linha.split(",").map((parte) => parte.trim());
+    return {
+      nome,
+      contacto: contacto || null,
+      turma: turma || null,
+    };
+  });
+
+  await prisma.candidato.createMany({ data: dados });
+
+  revalidatePath("/admin/candidatos");
+  revalidatePath("/admin");
+
+  return { success: `${dados.length} candidato(s) adicionado(s) com sucesso.` };
+}
