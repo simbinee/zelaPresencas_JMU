@@ -7,16 +7,46 @@ import { getSession } from "@/lib/auth";
 export async function marcarPresencaAction(
   eventoId: string,
   candidatoId: string,
-  presente: boolean
+  presente: boolean,
+  observacao?: string
 ) {
   const session = await getSession();
   if (!session) throw new Error("Não autorizado.");
 
   await prisma.attendance.upsert({
     where: { eventoId_candidatoId: { eventoId, candidatoId } },
-    update: { presente, marcadoPorId: session.sub },
-    create: { eventoId, candidatoId, presente, marcadoPorId: session.sub },
+    update: { presente, observacao: observacao ?? null, marcadoPorId: session.sub },
+    create: {
+      eventoId,
+      candidatoId,
+      presente,
+      observacao: observacao ?? null,
+      marcadoPorId: session.sub,
+    },
   });
+
+  revalidatePath(`/responsavel/eventos/${eventoId}`);
+  revalidatePath("/admin/relatorios");
+  revalidatePath("/admin");
+}
+
+export async function marcarTodosAction(
+  eventoId: string,
+  candidatoIds: string[],
+  presente: boolean
+) {
+  const session = await getSession();
+  if (!session) throw new Error("Não autorizado.");
+
+  await prisma.$transaction(
+    candidatoIds.map((candidatoId) =>
+      prisma.attendance.upsert({
+        where: { eventoId_candidatoId: { eventoId, candidatoId } },
+        update: { presente, marcadoPorId: session.sub },
+        create: { eventoId, candidatoId, presente, marcadoPorId: session.sub },
+      })
+    )
+  );
 
   revalidatePath(`/responsavel/eventos/${eventoId}`);
   revalidatePath("/admin/relatorios");

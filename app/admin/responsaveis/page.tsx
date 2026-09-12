@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NovoResponsavelForm } from "./NovoResponsavelForm";
-import { ApagarResponsavelBotao } from "./ApagarResponsavelBotao";
-import { UserCog } from "lucide-react";
+import { LinhaResponsavel } from "./LinhaResponsavel";
 
 export default async function ResponsaveisPage() {
   const responsaveis = await prisma.user.findMany({
@@ -30,16 +29,7 @@ export default async function ResponsaveisPage() {
         ) : (
           <ul className="divide-y divide-navy-900/10">
             {responsaveis.map((r) => (
-              <li key={r.id} className="flex items-center gap-4 px-5 py-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-navy-950/5 text-navy-900">
-                  <UserCog size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14.5px] font-medium text-navy-950">{r.nome}</p>
-                  <p className="text-[13px] text-navy-950/50">@{r.username}</p>
-                </div>
-                <ApagarResponsavelBotao id={r.id} nome={r.nome} />
-              </li>
+              <LinhaResponsavel key={r.id} id={r.id} nome={r.nome} username={r.username} />
             ))}
           </ul>
         )}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -55,7 +56,7 @@ export function SidebarNav({
               ? pathname === item.href
               : pathname.startsWith(item.href);
           return (
-            <a
+            <Link
               key={item.href}
               href={item.href}
               className={`focus-ring flex items-center gap-3 rounded-md px-3 py-2.5 text-[14px] transition-colors ${
@@ -66,7 +67,7 @@ export function SidebarNav({
             >
               {item.icon}
               {item.label}
-            </a>
+            </Link>
           );
         })}
       </nav>

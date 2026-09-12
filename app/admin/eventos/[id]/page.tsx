@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { contarPresencasPorCandidato } from "@/lib/contagens";
-import { ListaPresenca } from "./ListaPresenca";
+import { EditarEventoForm } from "./EditarEventoForm";
+import { ApagarEventoBotao } from "../ApagarEventoBotao";
+import { ListaPresenca } from "@/app/responsavel/eventos/[id]/ListaPresenca";
 import { ChevronLeft } from "lucide-react";
 
-export default async function MarcarPresencaPage({ params }: { params: { id: string } }) {
+export default async function AdminEventoDetalhe({ params }: { params: { id: string } }) {
   const evento = await prisma.evento.findUnique({ where: { id: params.id } });
   if (!evento) notFound();
 
@@ -34,24 +36,39 @@ export default async function MarcarPresencaPage({ params }: { params: { id: str
   return (
     <div className="space-y-5">
       <Link
-        href="/responsavel"
+        href="/admin/eventos"
         className="focus-ring inline-flex items-center gap-1 text-[13.5px] font-medium text-navy-950/55 hover:text-navy-950"
       >
         <ChevronLeft size={16} /> Voltar aos eventos
       </Link>
 
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-navy-950">{evento.titulo}</h1>
-        <p className="mt-1 text-[14px] text-navy-950/55">
-          {new Date(evento.data).toLocaleDateString("pt-PT", {
-            weekday: "long",
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-          })}
-          {evento.local ? ` · ${evento.local}` : ""}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-navy-950">{evento.titulo}</h1>
+          <p className="mt-1 text-[14px] text-navy-950/55">
+            {new Date(evento.data).toLocaleDateString("pt-PT", {
+              weekday: "long",
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            {evento.local ? ` · ${evento.local}` : ""}
+          </p>
+          {evento.descricao && (
+            <p className="mt-1.5 max-w-lg text-[13.5px] text-navy-950/50">{evento.descricao}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <EditarEventoForm evento={evento} />
+          <ApagarEventoBotao id={evento.id} />
+        </div>
       </div>
+
+      <p className="text-[13px] font-medium text-navy-950/40">
+        Podes marcar ou corrigir presenças diretamente aqui, tal como o responsável.
+      </p>
 
       <ListaPresenca
         eventoId={evento.id}

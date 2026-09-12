@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { alternarStatusCandidatoAction, apagarCandidatoAction } from "@/app/actions/candidatos";
 import { Trash2 } from "lucide-react";
 
@@ -18,7 +19,11 @@ export function LinhaCandidato({
 }) {
   return (
     <tr className="border-b border-navy-900/8 last:border-0">
-      <td className="px-5 py-3.5 text-[14.5px] font-medium text-navy-950">{nome}</td>
+      <td className="px-5 py-3.5 text-[14.5px] font-medium">
+        <Link href={`/admin/candidatos/${id}`} className="focus-ring text-navy-950 hover:text-flame-600 hover:underline">
+          {nome}
+        </Link>
+      </td>
       <td className="px-5 py-3.5 text-[14px] text-navy-950/60">{turma || "—"}</td>
       <td className="px-5 py-3.5 text-[14px] text-navy-950/60">{contacto || "—"}</td>
       <td className="px-5 py-3.5">

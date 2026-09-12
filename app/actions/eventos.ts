@@ -48,3 +48,30 @@ export async function apagarEventoAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/responsavel");
 }
+
+export async function atualizarEventoAction(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") || "");
+  const titulo = String(formData.get("titulo") || "").trim();
+  const local = String(formData.get("local") || "").trim();
+  const descricao = String(formData.get("descricao") || "").trim();
+  const dataStr = String(formData.get("data") || "");
+
+  if (!id || !titulo || !dataStr) return;
+
+  await prisma.evento.update({
+    where: { id },
+    data: {
+      titulo,
+      local: local || null,
+      descricao: descricao || null,
+      data: new Date(dataStr),
+    },
+  });
+
+  revalidatePath(`/admin/eventos/${id}`);
+  revalidatePath("/admin/eventos");
+  revalidatePath("/admin");
+  revalidatePath("/responsavel");
+}

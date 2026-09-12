@@ -18,3 +18,22 @@ export async function contarPresencasPorEvento(): Promise<Record<string, number>
   }
   return mapa;
 }
+
+/**
+ * Devolve um mapa { candidatoId: numeroDePresencas } com o total de
+ * presenças (em todos os eventos) de cada candidato — usado para
+ * mostrar a assiduidade de cada um enquanto o responsável marca presenças.
+ */
+export async function contarPresencasPorCandidato(): Promise<Record<string, number>> {
+  const grupos = await prisma.attendance.groupBy({
+    by: ["candidatoId"],
+    where: { presente: true },
+    _count: { _all: true },
+  });
+
+  const mapa: Record<string, number> = {};
+  for (const g of grupos) {
+    mapa[g.candidatoId] = g._count._all;
+  }
+  return mapa;
+}

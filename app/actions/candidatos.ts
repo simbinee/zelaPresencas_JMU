@@ -57,3 +57,22 @@ export async function apagarCandidatoAction(formData: FormData) {
   revalidatePath("/admin/candidatos");
   revalidatePath("/admin");
 }
+
+export async function atualizarCandidatoAction(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") || "");
+  const nome = String(formData.get("nome") || "").trim();
+  const contacto = String(formData.get("contacto") || "").trim();
+  const turma = String(formData.get("turma") || "").trim();
+
+  if (!id || !nome) return;
+
+  await prisma.candidato.update({
+    where: { id },
+    data: { nome, contacto: contacto || null, turma: turma || null },
+  });
+
+  revalidatePath(`/admin/candidatos/${id}`);
+  revalidatePath("/admin/candidatos");
+}

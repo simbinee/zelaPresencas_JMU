@@ -54,3 +54,27 @@ export async function apagarResponsavelAction(formData: FormData) {
   await prisma.user.delete({ where: { id } });
   revalidatePath("/admin/responsaveis");
 }
+
+export type RedefinirPasswordState = { error?: string; success?: string } | null;
+
+export async function redefinirPasswordAction(
+  _prev: RedefinirPasswordState,
+  formData: FormData
+): Promise<RedefinirPasswordState> {
+  await requireAdmin();
+
+  const id = String(formData.get("id") || "");
+  const password = String(formData.get("password") || "");
+
+  if (!id || !password) {
+    return { error: "Escreve a nova palavra-passe." };
+  }
+  if (password.length < 6) {
+    return { error: "A palavra-passe deve ter pelo menos 6 caracteres." };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await prisma.user.update({ where: { id }, data: { passwordHash } });
+
+  return { success: "Palavra-passe atualizada." };
+}

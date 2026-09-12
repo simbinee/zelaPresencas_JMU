@@ -25,8 +25,7 @@ export async function createSession(payload: SessionPayload) {
     .setExpirationTime("30d")
     .sign(getSecret());
 
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, {
+  cookies().set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -36,8 +35,7 @@ export async function createSession(payload: SessionPayload) {
 }
 
 export async function destroySession() {
-  const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAME);
+  cookies().delete(COOKIE_NAME);
 }
 
 export async function verifyToken(token: string): Promise<SessionPayload | null> {
@@ -54,8 +52,7 @@ export async function verifyToken(token: string): Promise<SessionPayload | null>
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
+  const token = cookies().get(COOKIE_NAME)?.value;
   if (!token) return null;
   return verifyToken(token);
 }
