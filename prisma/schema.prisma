@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  RESPONSAVEL
+}
+
+enum StatusCandidato {
+  ATIVO
+  INATIVO
+}
+
+model User {
+  id           String       @id @default(cuid())
+  nome         String
+  username     String       @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime     @default(now())
+  marcacoes    Attendance[] @relation("MarcadoPor")
+}
+
+model Candidato {
+  id          String           @id @default(cuid())
+  nome        String
+  contacto    String?
+  turma       String?
+  status      StatusCandidato  @default(ATIVO)
+  createdAt   DateTime         @default(now())
+  attendances Attendance[]
+}
+
+model Evento {
+  id          String       @id @default(cuid())
+  titulo      String
+  descricao   String?
+  local       String?
+  data        DateTime
+  createdAt   DateTime     @default(now())
+  attendances Attendance[]
+}
+
+model Attendance {
+  id           String    @id @default(cuid())
+  eventoId     String
+  candidatoId  String
+  presente     Boolean   @default(false)
+  observacao   String?
+  marcadoPorId String?
+  marcadoEm    DateTime  @updatedAt
+
+  evento     Evento     @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  candidato  Candidato  @relation(fields: [candidatoId], references: [id], onDelete: Cascade)
+  marcadoPor User?      @relation("MarcadoPor", fields: [marcadoPorId], references: [id])
+
+  @@unique([eventoId, candidatoId])
+}
