@@ -2,11 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { criarCandidatoAction } from "@/app/actions/candidatos";
+import { criarAnoLetivoAction } from "@/app/actions/turmas";
 import { Campo } from "@/components/Campo";
 import { Botao } from "@/components/Botao";
-import { TurmaSelect } from "@/components/TurmaSelect";
-import { TurmaParaSelecao } from "@/lib/turmas";
 import { useToast } from "@/components/Toast";
 import { Plus, X } from "lucide-react";
 
@@ -14,12 +12,12 @@ function BotaoCriar() {
   const { pending } = useFormStatus();
   return (
     <Botao type="submit" disabled={pending}>
-      {pending ? "A adicionar..." : "Adicionar candidato"}
+      {pending ? "A criar..." : "Criar ano letivo"}
     </Botao>
   );
 }
 
-export function NovoCandidatoForm({ turmas }: { turmas: TurmaParaSelecao[] }) {
+export function NovoAnoForm() {
   const [aberto, setAberto] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const { mostrarToast } = useToast();
@@ -27,7 +25,7 @@ export function NovoCandidatoForm({ turmas }: { turmas: TurmaParaSelecao[] }) {
   if (!aberto) {
     return (
       <Botao onClick={() => setAberto(true)} className="shrink-0">
-        <Plus size={16} /> Novo candidato
+        <Plus size={16} /> Novo ano letivo
       </Botao>
     );
   }
@@ -35,7 +33,7 @@ export function NovoCandidatoForm({ turmas }: { turmas: TurmaParaSelecao[] }) {
   return (
     <div className="w-full rounded-xl border border-navy-900/10 bg-white p-5">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-display text-lg font-semibold text-navy-950">Novo candidato</h3>
+        <h3 className="font-display text-lg font-semibold text-navy-950">Novo ano letivo</h3>
         <button
           onClick={() => setAberto(false)}
           className="focus-ring rounded-md p-1 text-navy-950/40 hover:text-navy-950"
@@ -48,22 +46,27 @@ export function NovoCandidatoForm({ turmas }: { turmas: TurmaParaSelecao[] }) {
         ref={formRef}
         action={async (fd) => {
           try {
-            await criarCandidatoAction(fd);
-            mostrarToast(`${fd.get("nome")} adicionado(a) com sucesso.`, "sucesso");
+            await criarAnoLetivoAction(fd);
+            mostrarToast(`Ano letivo "${fd.get("nome")}" criado.`, "sucesso");
             formRef.current?.reset();
             setAberto(false);
-          } catch {
-            mostrarToast("Não foi possível adicionar o candidato. Tenta novamente.", "erro");
+          } catch (erro) {
+            mostrarToast(
+              erro instanceof Error ? erro.message : "Não foi possível criar o ano letivo.",
+              "erro"
+            );
           }
         }}
-        className="grid gap-4 sm:grid-cols-3"
+        className="flex flex-wrap items-end gap-4"
       >
-        <Campo label="Nome completo" name="nome" placeholder="ex: Ana Cossa" required />
-        <Campo label="Contacto" name="contacto" placeholder="ex: 84 000 0000" />
-        <TurmaSelect turmas={turmas} />
-        <div className="sm:col-span-3">
-          <BotaoCriar />
+        <div className="min-w-[180px]">
+          <Campo label="Nome do ano" name="nome" placeholder="ex: 2027/2028" required />
         </div>
+        <label className="mb-2.5 flex items-center gap-2 text-[13.5px] font-medium text-navy-900/80">
+          <input type="checkbox" name="atual" className="h-4 w-4 rounded border-navy-900/25" />
+          Marcar como ano atual
+        </label>
+        <BotaoCriar />
       </form>
     </div>
   );

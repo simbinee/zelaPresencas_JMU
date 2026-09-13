@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { criarCandidatosEmMassaAction, AdicionarVariosState } from "@/app/actions/candidatos";
-import { Campo, CampoTexto } from "@/components/Campo";
+import { CampoTexto } from "@/components/Campo";
 import { Botao } from "@/components/Botao";
+import { TurmaSelect } from "@/components/TurmaSelect";
+import { TurmaParaSelecao } from "@/lib/turmas";
 import { ListPlus, X } from "lucide-react";
 
 function BotaoAdicionar() {
@@ -16,7 +18,7 @@ function BotaoAdicionar() {
   );
 }
 
-export function AdicionarVariosForm() {
+export function AdicionarVariosForm({ turmas }: { turmas: TurmaParaSelecao[] }) {
   const [aberto, setAberto] = useState(false);
   const [state, formAction] = useFormState<AdicionarVariosState, FormData>(
     criarCandidatosEmMassaAction,
@@ -54,7 +56,7 @@ export function AdicionarVariosForm() {
           required
         />
         <div className="max-w-xs">
-          <Campo label="Turma / grupo (aplica-se a todos, opcional)" name="turma" placeholder="ex: Turma 2026" />
+          <TurmaSelect turmas={turmas} label="Turma (aplica-se a todos, opcional)" />
         </div>
         {state?.error && (
           <p className="rounded-md bg-red-50 px-3.5 py-2.5 text-sm text-red-700">{state.error}</p>

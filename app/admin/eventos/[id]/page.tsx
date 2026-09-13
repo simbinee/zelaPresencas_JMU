@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { contarPresencasPorCandidato } from "@/lib/contagens";
+import { eventoJaTerminou } from "@/lib/eventos";
 import { EditarEventoForm } from "./EditarEventoForm";
 import { ApagarEventoBotao } from "../ApagarEventoBotao";
 import { AlternarMarcacaoAtrasada } from "./AlternarMarcacaoAtrasada";
@@ -21,13 +22,14 @@ export default async function AdminEventoDetalhe({ params }: { params: { id: str
           where: { eventoId: params.id },
           include: { marcadoPor: { select: { nome: true } } },
         },
+        turma: { include: { anoLetivo: true } },
       },
     }),
     prisma.evento.count(),
     contarPresencasPorCandidato(),
   ]);
 
-  const eventoJaPassou = evento.data.getTime() < Date.now();
+  const eventoJaPassou = eventoJaTerminou(evento.data);
   const podeMarcar = !eventoJaPassou || evento.permiteMarcacaoAtrasada;
 
   const candidatosComPresenca = candidatos.map((c) => {

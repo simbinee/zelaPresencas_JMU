@@ -1,21 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { listarTurmasParaSelecao } from "@/lib/turmas";
 import { EditarCandidatoForm } from "./EditarCandidatoForm";
 import { HistoricoChart } from "./HistoricoChart";
 import { ChevronLeft, Check, X } from "lucide-react";
 
 export default async function CandidatoDetalhe({ params }: { params: { id: string } }) {
-  const candidato = await prisma.candidato.findUnique({ where: { id: params.id } });
+  const candidato = await prisma.candidato.findUnique({
+    where: { id: params.id },
+    include: { turma: { include: { anoLetivo: true } } },
+  });
   if (!candidato) notFound();
 
-  const [attendances, totalEventos] = await Promise.all([
+  const [attendances, totalEventos, turmas] = await Promise.all([
     prisma.attendance.findMany({
       where: { candidatoId: params.id },
       include: { evento: true },
       orderBy: { evento: { data: "desc" } },
     }),
     prisma.evento.count(),
+    listarTurmasParaSelecao(),
   ]);
 
   const totalPresencas = attendances.filter((a) => a.presente).length;
@@ -34,11 +39,11 @@ export default async function CandidatoDetalhe({ params }: { params: { id: strin
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy-950">{candidato.nome}</h1>
           <p className="mt-1 text-[14px] text-navy-950/55">
-            {candidato.turma ? `${candidato.turma}` : "Sem turma"}
+            {candidato.turma ? `${candidato.turma.nome} · ${candidato.turma.anoLetivo.nome}` : "Sem turma"}
             {candidato.contacto ? ` · ${candidato.contacto}` : ""}
           </p>
         </div>
-        <EditarCandidatoForm candidato={candidato} />
+        <EditarCandidatoForm candidato={candidato} turmas={turmas} />
       </div>
 
       <div className="grid grid-cols-3 gap-4">

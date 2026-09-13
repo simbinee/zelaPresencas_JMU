@@ -10,6 +10,7 @@ import {
   BarChart3,
   LogOut,
   ClipboardCheck,
+  School,
 } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import { Emblema } from "./Emblema";
@@ -29,6 +30,7 @@ export function SidebarNav({
     { href: "/admin", label: "Visão geral", icon: <LayoutDashboard size={18} /> },
     { href: "/admin/eventos", label: "Eventos", icon: <CalendarDays size={18} /> },
     { href: "/admin/candidatos", label: "Candidatos", icon: <Users size={18} /> },
+    { href: "/admin/turmas", label: "Turmas", icon: <School size={18} /> },
     { href: "/admin/responsaveis", label: "Responsáveis", icon: <UserCog size={18} /> },
     { href: "/admin/relatorios", label: "Relatórios", icon: <BarChart3 size={18} /> },
   ];

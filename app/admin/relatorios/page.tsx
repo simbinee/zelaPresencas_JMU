@@ -9,7 +9,10 @@ export default async function RelatoriosPage() {
   const candidatos = await prisma.candidato.findMany({
     where: { status: "ATIVO" },
     orderBy: { nome: "asc" },
-    include: { attendances: { where: { presente: true } } },
+    include: {
+      attendances: { where: { presente: true } },
+      turma: { include: { anoLetivo: true } },
+    },
   });
 
   const totalEventos = await prisma.evento.count();
@@ -33,7 +36,7 @@ export default async function RelatoriosPage() {
 
   const porTurma = new Map<string, number[]>();
   for (const l of linhas) {
-    const chave = l.turma || "Sem turma";
+    const chave = l.turma?.nome || "Sem turma";
     if (!porTurma.has(chave)) porTurma.set(chave, []);
     porTurma.get(chave)!.push(l.percentagem);
   }

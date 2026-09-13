@@ -7,7 +7,7 @@ import { Search, TriangleAlert, Download } from "lucide-react";
 type Linha = {
   id: string;
   nome: string;
-  turma: string | null;
+  turma: { id: string; nome: string; anoLetivo: { id: string; nome: string } } | null;
   presencas: number;
   percentagem: number;
 };
@@ -22,26 +22,44 @@ export function TabelaRelatorios({
   totalEventos: number;
 }) {
   const [busca, setBusca] = useState("");
+  const [anoSelecionado, setAnoSelecionado] = useState<string | null>(null);
   const [turmaSelecionada, setTurmaSelecionada] = useState<string | null>(null);
 
-  const turmas = useMemo(() => {
-    const unicas = new Set(linhas.map((l) => l.turma).filter((t): t is string => Boolean(t)));
-    return Array.from(unicas).sort();
+  const anos = useMemo(() => {
+    const mapa = new Map<string, string>();
+    for (const l of linhas) {
+      if (l.turma) mapa.set(l.turma.anoLetivo.id, l.turma.anoLetivo.nome);
+    }
+    return Array.from(mapa.entries())
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => b.nome.localeCompare(a.nome));
   }, [linhas]);
+
+  const turmas = useMemo(() => {
+    const mapa = new Map<string, { id: string; nome: string; anoId: string }>();
+    for (const l of linhas) {
+      if (l.turma) mapa.set(l.turma.id, { id: l.turma.id, nome: l.turma.nome, anoId: l.turma.anoLetivo.id });
+    }
+    return Array.from(mapa.values())
+      .filter((t) => !anoSelecionado || t.anoId === anoSelecionado)
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [linhas, anoSelecionado]);
 
   const emRisco = linhas.filter((l) => l.percentagem < LIMIAR_RISCO);
 
   const filtrados = linhas.filter((l) => {
     const combinaBusca = l.nome.toLowerCase().includes(busca.toLowerCase());
-    const combinaTurma = !turmaSelecionada || l.turma === turmaSelecionada;
-    return combinaBusca && combinaTurma;
+    const combinaAno = !anoSelecionado || l.turma?.anoLetivo.id === anoSelecionado;
+    const combinaTurma = !turmaSelecionada || l.turma?.id === turmaSelecionada;
+    return combinaBusca && combinaAno && combinaTurma;
   });
 
   function exportarCsv() {
-    const cabecalho = ["Nome", "Turma", "Presenças", "Total de eventos", "Assiduidade (%)"];
+    const cabecalho = ["Nome", "Turma", "Ano letivo", "Presenças", "Total de eventos", "Assiduidade (%)"];
     const linhasCsv = linhas.map((l) => [
       l.nome,
-      l.turma || "",
+      l.turma?.nome || "",
+      l.turma?.anoLetivo.nome || "",
       String(l.presencas),
       String(totalEventos),
       String(l.percentagem),
@@ -95,6 +113,29 @@ export function TabelaRelatorios({
             className="focus-ring w-full rounded-md border border-navy-900/15 bg-white py-2 pl-9 pr-3.5 text-[14px] placeholder:text-navy-950/35"
           />
         </div>
+        {anos.length > 0 && (
+          <select
+            value={anoSelecionado ?? ""}
+            onChange={(e) => {
+              const novoAno = e.target.value || null;
+              setAnoSelecionado(novoAno);
+              if (turmaSelecionada) {
+                const aindaValida = turmas.some(
+                  (t) => t.id === turmaSelecionada && (!novoAno || t.anoId === novoAno)
+                );
+                if (!aindaValida) setTurmaSelecionada(null);
+              }
+            }}
+            className="focus-ring shrink-0 rounded-md border border-navy-900/15 bg-white py-2 px-3 text-[13.5px] text-navy-950/80"
+          >
+            <option value="">Todos os anos</option>
+            {anos.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nome}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           onClick={exportarCsv}
           className="focus-ring flex shrink-0 items-center gap-1.5 rounded-md border border-navy-900/15 bg-white px-3 py-2 text-[13px] font-medium text-navy-950/70 hover:bg-navy-950/[0.03]"
@@ -117,15 +158,15 @@ export function TabelaRelatorios({
           </button>
           {turmas.map((t) => (
             <button
-              key={t}
-              onClick={() => setTurmaSelecionada(t)}
+              key={t.id}
+              onClick={() => setTurmaSelecionada(t.id)}
               className={`focus-ring rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
-                turmaSelecionada === t
+                turmaSelecionada === t.id
                   ? "bg-navy-950 text-white"
                   : "bg-navy-950/5 text-navy-950/60 hover:bg-navy-950/10"
               }`}
             >
-              {t}
+              {t.nome}
             </button>
           ))}
         </div>
@@ -158,7 +199,9 @@ export function TabelaRelatorios({
                         {l.nome}
                       </Link>
                     </td>
-                    <td className="px-5 py-3.5 text-[14px] text-navy-950/60">{l.turma || "—"}</td>
+                    <td className="px-5 py-3.5 text-[14px] text-navy-950/60">
+                      {l.turma ? l.turma.nome : "—"}
+                    </td>
                     <td className="px-5 py-3.5 text-[14px] text-navy-950/60">
                       {l.presencas} / {totalEventos}
                     </td>

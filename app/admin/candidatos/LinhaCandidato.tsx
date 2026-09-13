@@ -16,7 +16,7 @@ export function LinhaCandidato({
   id: string;
   nome: string;
   contacto: string | null;
-  turma: string | null;
+  turma: { id: string; nome: string; anoLetivo: { id: string; nome: string } } | null;
   status: "ATIVO" | "INATIVO";
 }) {
   const { mostrarToast } = useToast();
@@ -68,7 +68,16 @@ export function LinhaCandidato({
           {nome}
         </Link>
       </td>
-      <td className="px-5 py-3.5 text-[14px] text-navy-950/60">{turma || "—"}</td>
+      <td className="px-5 py-3.5 text-[14px] text-navy-950/60">
+        {turma ? (
+          <>
+            {turma.nome}
+            <span className="ml-1 text-[12px] text-navy-950/35">· {turma.anoLetivo.nome}</span>
+          </>
+        ) : (
+          "—"
+        )}
+      </td>
       <td className="px-5 py-3.5 text-[14px] text-navy-950/60">{contacto || "—"}</td>
       <td className="px-5 py-3.5">
         <button

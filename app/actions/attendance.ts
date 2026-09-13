@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { eventoJaTerminou } from "@/lib/eventos";
 
 async function garantirQuePodeMarcar(eventoId: string) {
   const evento = await prisma.evento.findUnique({
@@ -11,7 +12,7 @@ async function garantirQuePodeMarcar(eventoId: string) {
   });
   if (!evento) throw new Error("Evento não encontrado.");
 
-  const jaPassou = evento.data.getTime() < Date.now();
+  const jaPassou = eventoJaTerminou(evento.data);
   if (jaPassou && !evento.permiteMarcacaoAtrasada) {
     throw new Error(
       "Este evento já passou e a marcação de presenças está bloqueada. Pede a um admin para ativar a exceção neste evento."

@@ -1,10 +1,17 @@
 import { prisma } from "@/lib/prisma";
+import { listarTurmasParaSelecao } from "@/lib/turmas";
 import { NovoCandidatoForm } from "./NovoCandidatoForm";
 import { AdicionarVariosForm } from "./AdicionarVariosForm";
 import { ListaCandidatos } from "./ListaCandidatos";
 
 export default async function CandidatosPage() {
-  const candidatos = await prisma.candidato.findMany({ orderBy: { nome: "asc" } });
+  const [candidatos, turmas] = await Promise.all([
+    prisma.candidato.findMany({
+      orderBy: { nome: "asc" },
+      include: { turma: { include: { anoLetivo: true } } },
+    }),
+    listarTurmasParaSelecao(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -18,8 +25,8 @@ export default async function CandidatosPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <NovoCandidatoForm />
-        <AdicionarVariosForm />
+        <NovoCandidatoForm turmas={turmas} />
+        <AdicionarVariosForm turmas={turmas} />
       </div>
 
       {candidatos.length === 0 ? (

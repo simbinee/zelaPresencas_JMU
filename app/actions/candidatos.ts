@@ -17,15 +17,16 @@ export async function criarCandidatoAction(formData: FormData) {
 
   const nome = String(formData.get("nome") || "").trim();
   const contacto = String(formData.get("contacto") || "").trim();
-  const turma = String(formData.get("turma") || "").trim();
+  const turmaId = String(formData.get("turmaId") || "").trim();
 
   if (!nome) return;
 
   await prisma.candidato.create({
-    data: { nome, contacto: contacto || null, turma: turma || null },
+    data: { nome, contacto: contacto || null, turmaId: turmaId || null },
   });
 
   revalidatePath("/admin/candidatos");
+  revalidatePath("/admin/turmas");
   revalidatePath("/admin");
 }
 
@@ -64,17 +65,18 @@ export async function atualizarCandidatoAction(formData: FormData) {
   const id = String(formData.get("id") || "");
   const nome = String(formData.get("nome") || "").trim();
   const contacto = String(formData.get("contacto") || "").trim();
-  const turma = String(formData.get("turma") || "").trim();
+  const turmaId = String(formData.get("turmaId") || "").trim();
 
   if (!id || !nome) return;
 
   await prisma.candidato.update({
     where: { id },
-    data: { nome, contacto: contacto || null, turma: turma || null },
+    data: { nome, contacto: contacto || null, turmaId: turmaId || null },
   });
 
   revalidatePath(`/admin/candidatos/${id}`);
   revalidatePath("/admin/candidatos");
+  revalidatePath("/admin/turmas");
 }
 
 export type AdicionarVariosState = { error?: string; success?: string } | null;
@@ -86,7 +88,7 @@ export async function criarCandidatosEmMassaAction(
   await requireAdmin();
 
   const lista = String(formData.get("lista") || "");
-  const turma = String(formData.get("turma") || "").trim();
+  const turmaId = String(formData.get("turmaId") || "").trim();
 
   const linhas = lista
     .split("\n")
@@ -102,13 +104,14 @@ export async function criarCandidatosEmMassaAction(
     return {
       nome,
       contacto: contacto || null,
-      turma: turma || null,
+      turmaId: turmaId || null,
     };
   });
 
   await prisma.candidato.createMany({ data: dados });
 
   revalidatePath("/admin/candidatos");
+  revalidatePath("/admin/turmas");
   revalidatePath("/admin");
 
   return { success: `${dados.length} candidato(s) adicionado(s) com sucesso.` };

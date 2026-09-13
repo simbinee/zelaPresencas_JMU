@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 import { atualizarCandidatoAction } from "@/app/actions/candidatos";
 import { Campo } from "@/components/Campo";
 import { Botao } from "@/components/Botao";
+import { TurmaSelect } from "@/components/TurmaSelect";
+import { TurmaParaSelecao } from "@/lib/turmas";
 import { useToast } from "@/components/Toast";
 import { Pencil, X } from "lucide-react";
 
@@ -19,8 +21,10 @@ function BotaoGuardar() {
 
 export function EditarCandidatoForm({
   candidato,
+  turmas,
 }: {
-  candidato: { id: string; nome: string; contacto: string | null; turma: string | null };
+  candidato: { id: string; nome: string; contacto: string | null; turmaId: string | null };
+  turmas: TurmaParaSelecao[];
 }) {
   const [aberto, setAberto] = useState(false);
   const { mostrarToast } = useToast();
@@ -60,7 +64,7 @@ export function EditarCandidatoForm({
         <input type="hidden" name="id" value={candidato.id} />
         <Campo label="Nome completo" name="nome" defaultValue={candidato.nome} required />
         <Campo label="Contacto" name="contacto" defaultValue={candidato.contacto || ""} />
-        <Campo label="Turma / grupo" name="turma" defaultValue={candidato.turma || ""} />
+        <TurmaSelect turmas={turmas} defaultValue={candidato.turmaId || ""} />
         <div className="sm:col-span-3">
           <BotaoGuardar />
         </div>

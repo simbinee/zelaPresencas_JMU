@@ -32,10 +32,9 @@ export default async function AdminDashboard() {
     }),
     contarPresencasPorEvento(),
     prisma.evento.count(),
-    prisma.candidato.groupBy({
-      by: ["turma"],
+    prisma.candidato.findMany({
       where: { status: "ATIVO" },
-      _count: { _all: true },
+      select: { turma: { select: { nome: true } } },
     }),
   ]);
 
@@ -56,8 +55,13 @@ export default async function AdminDashboard() {
           : 0,
     }));
 
-  const dadosTurma = candidatosPorTurma
-    .map((g) => ({ nome: g.turma || "Sem turma", total: g._count._all }))
+  const contagemPorTurma = new Map<string, number>();
+  for (const c of candidatosPorTurma) {
+    const chave = c.turma?.nome || "Sem turma";
+    contagemPorTurma.set(chave, (contagemPorTurma.get(chave) ?? 0) + 1);
+  }
+  const dadosTurma = Array.from(contagemPorTurma.entries())
+    .map(([nome, total]) => ({ nome, total }))
     .sort((a, b) => b.total - a.total);
 
   return (

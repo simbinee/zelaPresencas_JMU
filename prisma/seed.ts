@@ -30,6 +30,18 @@ async function main() {
   });
 
   console.log("Utilizadores de teste criados: admin/admin123 e responsavel/responsavel123");
+
+  // Numa instalação nova (sem candidatos antigos para migrar), cria já o ano
+  // letivo atual para o admin poder começar logo a criar turmas.
+  const totalAnos = await prisma.anoLetivo.count();
+  if (totalAnos === 0) {
+    const ano = new Date().getFullYear();
+    const mes = new Date().getMonth();
+    const inicio = mes >= 7 ? ano : ano - 1;
+    const nomeAno = `${inicio}/${inicio + 1}`;
+    await prisma.anoLetivo.create({ data: { nome: nomeAno, atual: true } });
+    console.log(`Ano letivo "${nomeAno}" criado como ano atual.`);
+  }
 }
 
 main()

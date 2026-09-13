@@ -13,7 +13,7 @@ function mensagemDeErro(erro: unknown, fallback: string) {
 type Candidato = {
   id: string;
   nome: string;
-  turma: string | null;
+  turma: { id: string; nome: string; anoLetivo: { id: string; nome: string } } | null;
   presente: boolean | null;
   observacao: string;
   totalPresencas: number;
@@ -43,6 +43,7 @@ export function ListaPresenca({
 }) {
   const [candidatos, setCandidatos] = useState(candidatosIniciais);
   const [busca, setBusca] = useState("");
+  const [anoSelecionado, setAnoSelecionado] = useState<string | null>(null);
   const [turmaSelecionada, setTurmaSelecionada] = useState<string | null>(null);
   const [confirmacao, setConfirmacao] = useState<Confirmacao>(null);
   const [emEdicaoIds, setEmEdicaoIds] = useState<Set<string>>(new Set());
@@ -62,17 +63,31 @@ export function ListaPresenca({
     });
   }
 
-  const turmas = useMemo(() => {
-    const unicas = new Set(
-      candidatos.map((c) => c.turma).filter((t): t is string => Boolean(t))
-    );
-    return Array.from(unicas).sort();
+  const anos = useMemo(() => {
+    const mapa = new Map<string, string>();
+    for (const c of candidatos) {
+      if (c.turma) mapa.set(c.turma.anoLetivo.id, c.turma.anoLetivo.nome);
+    }
+    return Array.from(mapa.entries())
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => b.nome.localeCompare(a.nome));
   }, [candidatos]);
+
+  const turmas = useMemo(() => {
+    const mapa = new Map<string, { id: string; nome: string; anoId: string }>();
+    for (const c of candidatos) {
+      if (c.turma) mapa.set(c.turma.id, { id: c.turma.id, nome: c.turma.nome, anoId: c.turma.anoLetivo.id });
+    }
+    return Array.from(mapa.values())
+      .filter((t) => !anoSelecionado || t.anoId === anoSelecionado)
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [candidatos, anoSelecionado]);
 
   const filtrados = candidatos.filter((c) => {
     const combinaBusca = c.nome.toLowerCase().includes(busca.toLowerCase());
-    const combinaTurma = !turmaSelecionada || c.turma === turmaSelecionada;
-    return combinaBusca && combinaTurma;
+    const combinaAno = !anoSelecionado || c.turma?.anoLetivo.id === anoSelecionado;
+    const combinaTurma = !turmaSelecionada || c.turma?.id === turmaSelecionada;
+    return combinaBusca && combinaAno && combinaTurma;
   });
 
   const totalPresentes = candidatos.filter((c) => c.presente === true).length;
@@ -289,6 +304,29 @@ export function ListaPresenca({
             className="focus-ring w-full rounded-md border border-navy-900/15 bg-white py-2.5 pl-9 pr-3.5 text-[14.5px] placeholder:text-navy-950/35"
           />
         </div>
+        {anos.length > 1 && (
+          <select
+            value={anoSelecionado ?? ""}
+            onChange={(e) => {
+              const novoAno = e.target.value || null;
+              setAnoSelecionado(novoAno);
+              if (turmaSelecionada) {
+                const aindaValida = turmas.some(
+                  (t) => t.id === turmaSelecionada && (!novoAno || t.anoId === novoAno)
+                );
+                if (!aindaValida) setTurmaSelecionada(null);
+              }
+            }}
+            className="focus-ring shrink-0 rounded-md border border-navy-900/15 bg-white py-2.5 px-3 text-[13.5px] text-navy-950/80"
+          >
+            <option value="">Todos os anos</option>
+            {anos.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nome}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {turmas.length > 0 && (
@@ -305,15 +343,15 @@ export function ListaPresenca({
           </button>
           {turmas.map((t) => (
             <button
-              key={t}
-              onClick={() => setTurmaSelecionada(t)}
+              key={t.id}
+              onClick={() => setTurmaSelecionada(t.id)}
               className={`focus-ring rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
-                turmaSelecionada === t
+                turmaSelecionada === t.id
                   ? "bg-navy-950 text-white"
                   : "bg-navy-950/5 text-navy-950/60 hover:bg-navy-950/10"
               }`}
             >
-              {t}
+              {t.nome}
             </button>
           ))}
         </div>
@@ -331,7 +369,7 @@ export function ListaPresenca({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14.5px] font-medium text-navy-950">{c.nome}</p>
                   <p className="text-[12px] text-navy-950/45">
-                    {c.turma ? `${c.turma} · ` : ""}
+                    {c.turma ? `${c.turma.nome} · ` : ""}
                     {c.totalPresencas}/{totalEventos} eventos ao todo
                   </p>
                   {mostrarAuditoria && c.presente !== null && c.marcadoPorNome && (

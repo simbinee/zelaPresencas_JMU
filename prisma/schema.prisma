@@ -27,11 +27,39 @@ model User {
   marcacoes    Attendance[] @relation("MarcadoPor")
 }
 
+model AnoLetivo {
+  id        String   @id @default(cuid())
+  // ex: "2026/2027"
+  nome      String   @unique
+  // só um ano pode estar marcado como atual (é imposto no código, não no schema)
+  atual     Boolean  @default(false)
+  createdAt DateTime @default(now())
+  turmas    Turma[]
+}
+
+model Turma {
+  id          String      @id @default(cuid())
+  nome        String
+  anoLetivoId String
+  createdAt   DateTime    @default(now())
+  anoLetivo   AnoLetivo   @relation(fields: [anoLetivoId], references: [id], onDelete: Cascade)
+  candidatos  Candidato[]
+
+  // não pode haver duas turmas com o mesmo nome no mesmo ano letivo
+  @@unique([anoLetivoId, nome])
+}
+
 model Candidato {
   id          String           @id @default(cuid())
   nome        String
   contacto    String?
-  turma       String?
+  // DEPRECATED: turma antiga em texto livre. Mapeado para a coluna "turma"
+  // já existente na base de dados para não perder os dados de produção —
+  // é lida uma única vez pelo script prisma/migrar-turmas.ts e pode ser
+  // removida (e a coluna eliminada com prisma db push) depois de migrada.
+  turmaTextoAntigo String?     @map("turma")
+  turmaId     String?
+  turma       Turma?           @relation(fields: [turmaId], references: [id], onDelete: SetNull)
   status      StatusCandidato  @default(ATIVO)
   createdAt   DateTime         @default(now())
   attendances Attendance[]
