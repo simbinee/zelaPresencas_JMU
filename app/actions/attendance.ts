@@ -4,6 +4,21 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
+async function garantirQuePodeMarcar(eventoId: string) {
+  const evento = await prisma.evento.findUnique({
+    where: { id: eventoId },
+    select: { data: true, permiteMarcacaoAtrasada: true },
+  });
+  if (!evento) throw new Error("Evento não encontrado.");
+
+  const jaPassou = evento.data.getTime() < Date.now();
+  if (jaPassou && !evento.permiteMarcacaoAtrasada) {
+    throw new Error(
+      "Este evento já passou e a marcação de presenças está bloqueada. Pede a um admin para ativar a exceção neste evento."
+    );
+  }
+}
+
 export async function marcarPresencaAction(
   eventoId: string,
   candidatoId: string,
@@ -12,6 +27,7 @@ export async function marcarPresencaAction(
 ) {
   const session = await getSession();
   if (!session) throw new Error("Não autorizado.");
+  await garantirQuePodeMarcar(eventoId);
 
   await prisma.attendance.upsert({
     where: { eventoId_candidatoId: { eventoId, candidatoId } },
@@ -37,6 +53,7 @@ export async function marcarTodosAction(
 ) {
   const session = await getSession();
   if (!session) throw new Error("Não autorizado.");
+  await garantirQuePodeMarcar(eventoId);
 
   await prisma.$transaction(
     candidatoIds.map((candidatoId) =>
@@ -56,6 +73,7 @@ export async function marcarTodosAction(
 export async function removerMarcacaoAction(eventoId: string, candidatoId: string) {
   const session = await getSession();
   if (!session) throw new Error("Não autorizado.");
+  await garantirQuePodeMarcar(eventoId);
 
   await prisma.attendance.deleteMany({ where: { eventoId, candidatoId } });
 

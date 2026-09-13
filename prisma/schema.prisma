@@ -38,13 +38,14 @@ model Candidato {
 }
 
 model Evento {
-  id          String       @id @default(cuid())
-  titulo      String
-  descricao   String?
-  local       String?
-  data        DateTime
-  createdAt   DateTime     @default(now())
-  attendances Attendance[]
+  id                      String       @id @default(cuid())
+  titulo                  String
+  descricao               String?
+  local                   String?
+  data                    DateTime
+  permiteMarcacaoAtrasada Boolean      @default(false)
+  createdAt               DateTime     @default(now())
+  attendances             Attendance[]
 }
 
 model Attendance {

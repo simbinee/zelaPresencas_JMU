@@ -19,6 +19,9 @@ export default async function MarcarPresencaPage({ params }: { params: { id: str
     contarPresencasPorCandidato(),
   ]);
 
+  const eventoJaPassou = evento.data.getTime() < Date.now();
+  const podeMarcar = !eventoJaPassou || evento.permiteMarcacaoAtrasada;
+
   const candidatosComPresenca = candidatos.map((c) => {
     const marcacao = c.attendances[0];
     return {
@@ -57,6 +60,7 @@ export default async function MarcarPresencaPage({ params }: { params: { id: str
         eventoId={evento.id}
         candidatosIniciais={candidatosComPresenca}
         totalEventos={totalEventos}
+        bloqueado={!podeMarcar}
       />
     </div>
   );

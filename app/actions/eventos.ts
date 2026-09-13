@@ -37,6 +37,18 @@ export async function criarEventoAction(formData: FormData) {
   revalidatePath("/responsavel");
 }
 
+export async function alternarMarcacaoAtrasadaAction(eventoId: string, permitir: boolean) {
+  await requireAdmin();
+
+  await prisma.evento.update({
+    where: { id: eventoId },
+    data: { permiteMarcacaoAtrasada: permitir },
+  });
+
+  revalidatePath(`/admin/eventos/${eventoId}`);
+  revalidatePath(`/responsavel/eventos/${eventoId}`);
+}
+
 export async function apagarEventoAction(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") || "");

@@ -1,10 +1,14 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Check, X, Search, MessageSquarePlus, UserCheck } from "lucide-react";
+import { Check, X, Search, MessageSquarePlus, UserCheck, Lock, Pencil } from "lucide-react";
 import { marcarPresencaAction, marcarTodosAction, removerMarcacaoAction } from "@/app/actions/attendance";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
+
+function mensagemDeErro(erro: unknown, fallback: string) {
+  return erro instanceof Error && erro.message ? erro.message : fallback;
+}
 
 type Candidato = {
   id: string;
@@ -28,18 +32,35 @@ export function ListaPresenca({
   candidatosIniciais,
   totalEventos,
   mostrarAuditoria = false,
+  bloqueado = false,
 }: {
   eventoId: string;
   candidatosIniciais: Candidato[];
   totalEventos: number;
   mostrarAuditoria?: boolean;
+  /** true quando o evento já passou e a marcação não foi liberada pelo admin para este evento */
+  bloqueado?: boolean;
 }) {
   const [candidatos, setCandidatos] = useState(candidatosIniciais);
   const [busca, setBusca] = useState("");
   const [turmaSelecionada, setTurmaSelecionada] = useState<string | null>(null);
   const [confirmacao, setConfirmacao] = useState<Confirmacao>(null);
+  const [emEdicaoIds, setEmEdicaoIds] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
   const { mostrarToast } = useToast();
+
+  function abrirEdicao(id: string) {
+    setEmEdicaoIds((prev) => new Set(prev).add(id));
+  }
+
+  function fecharEdicao(id: string) {
+    setEmEdicaoIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
 
   const turmas = useMemo(() => {
     const unicas = new Set(
@@ -63,6 +84,7 @@ export function ListaPresenca({
   function aplicarMarcacao(id: string, presente: boolean) {
     const atual = candidatos.find((c) => c.id === id);
     const presenteAnterior = atual?.presente ?? null;
+    fecharEdicao(id);
     setCandidatos((prev) => prev.map((c) => (c.id === id ? { ...c, presente } : c)));
     startTransition(() => {
       void (async () => {
@@ -72,11 +94,11 @@ export function ListaPresenca({
             `${atual?.nome ?? "Candidato"} marcado${presente ? " como presente" : " como ausente"}.`,
             "sucesso"
           );
-        } catch {
+        } catch (erro) {
           setCandidatos((prev) =>
             prev.map((c) => (c.id === id ? { ...c, presente: presenteAnterior } : c))
           );
-          mostrarToast("Não foi possível guardar a marcação. Tenta novamente.", "erro");
+          mostrarToast(mensagemDeErro(erro, "Não foi possível guardar a marcação. Tenta novamente."), "erro");
         }
       })();
     });
@@ -84,6 +106,7 @@ export function ListaPresenca({
 
   function aplicarRemocao(id: string) {
     const atual = candidatos.find((c) => c.id === id);
+    fecharEdicao(id);
     setCandidatos((prev) =>
       prev.map((c) => (c.id === id ? { ...c, presente: null, observacao: "" } : c))
     );
@@ -92,19 +115,26 @@ export function ListaPresenca({
         try {
           await removerMarcacaoAction(eventoId, id);
           mostrarToast(`Marcação de ${atual?.nome ?? "candidato"} removida.`, "info");
-        } catch {
+        } catch (erro) {
           setCandidatos((prev) =>
             prev.map((c) =>
               c.id === id ? { ...c, presente: atual?.presente ?? null, observacao: atual?.observacao ?? "" } : c
             )
           );
-          mostrarToast("Não foi possível remover a marcação. Tenta novamente.", "erro");
+          mostrarToast(mensagemDeErro(erro, "Não foi possível remover a marcação. Tenta novamente."), "erro");
         }
       })();
     });
   }
 
   function pedirMarcacao(id: string, novoValor: boolean) {
+    if (bloqueado) {
+      mostrarToast(
+        "Este evento já passou. Pede a um admin para ativar a exceção neste evento.",
+        "erro"
+      );
+      return;
+    }
     const candidato = candidatos.find((c) => c.id === id);
     if (!candidato) return;
 
@@ -124,6 +154,13 @@ export function ListaPresenca({
   }
 
   function guardarNota(id: string, observacao: string) {
+    if (bloqueado) {
+      mostrarToast(
+        "Este evento já passou. Pede a um admin para ativar a exceção neste evento.",
+        "erro"
+      );
+      return;
+    }
     setCandidatos((prev) => prev.map((c) => (c.id === id ? { ...c, observacao } : c)));
     const atual = candidatos.find((c) => c.id === id);
     startTransition(() => {
@@ -131,14 +168,21 @@ export function ListaPresenca({
         try {
           await marcarPresencaAction(eventoId, id, atual?.presente ?? false, observacao || undefined);
           mostrarToast("Nota guardada.", "sucesso");
-        } catch {
-          mostrarToast("Não foi possível guardar a nota. Tenta novamente.", "erro");
+        } catch (erro) {
+          mostrarToast(mensagemDeErro(erro, "Não foi possível guardar a nota. Tenta novamente."), "erro");
         }
       })();
     });
   }
 
   function pedirMarcarTodosVisiveis(presente: boolean) {
+    if (bloqueado) {
+      mostrarToast(
+        "Este evento já passou. Pede a um admin para ativar a exceção neste evento.",
+        "erro"
+      );
+      return;
+    }
     setConfirmacao({ tipo: "todos", presente, quantidade: filtrados.length });
   }
 
@@ -165,14 +209,17 @@ export function ListaPresenca({
               }.`,
               "sucesso"
             );
-          } catch {
+          } catch (erro) {
             setCandidatos((prev) =>
               prev.map((c) => {
                 const original = anteriores.find((a) => a.id === c.id);
                 return original ? { ...c, presente: original.presente } : c;
               })
             );
-            mostrarToast("Não foi possível aplicar a marcação em massa. Tenta novamente.", "erro");
+            mostrarToast(
+              mensagemDeErro(erro, "Não foi possível aplicar a marcação em massa. Tenta novamente."),
+              "erro"
+            );
           }
         })();
       });
@@ -183,6 +230,18 @@ export function ListaPresenca({
 
   return (
     <div className="space-y-4">
+      {bloqueado && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+          <Lock size={16} className="mt-0.5 shrink-0" />
+          <p className="text-[13.5px] leading-snug">
+            Este evento já passou, por isso a marcação de presenças está bloqueada.
+            {mostrarAuditoria
+              ? " Usa o botão acima para ativar a exceção neste evento, se precisares de corrigir algo."
+              : " Pede a um admin para ativar a exceção neste evento, se precisares de corrigir algo."}
+          </p>
+        </div>
+      )}
+
       <div className="rounded-xl border border-navy-900/10 bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex gap-4 text-[13px]">
@@ -203,13 +262,15 @@ export function ListaPresenca({
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => pedirMarcarTodosVisiveis(true)}
-          className="focus-ring rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] font-medium text-emerald-700 hover:bg-emerald-100"
+          disabled={bloqueado}
+          className="focus-ring rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-50"
         >
           Marcar todos presentes
         </button>
         <button
           onClick={() => pedirMarcarTodosVisiveis(false)}
-          className="focus-ring rounded-md border border-navy-900/15 bg-white px-3 py-2 text-[13px] font-medium text-navy-950/60 hover:bg-navy-950/[0.03]"
+          disabled={bloqueado}
+          className="focus-ring rounded-md border border-navy-900/15 bg-white px-3 py-2 text-[13px] font-medium text-navy-950/60 hover:bg-navy-950/[0.03] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
         >
           Marcar todos ausentes
         </button>
@@ -290,30 +351,71 @@ export function ListaPresenca({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1.5">
-                  <button
-                    onClick={() => pedirMarcacao(c.id, true)}
-                    aria-label="Marcar presente"
-                    className={`focus-ring flex items-center gap-1 rounded-md px-2.5 py-2 text-[12.5px] font-medium transition-colors ${
-                      c.presente === true
-                        ? "bg-emerald-600 text-white"
-                        : "bg-navy-950/5 text-navy-950/50 hover:bg-emerald-50 hover:text-emerald-700"
-                    }`}
-                  >
-                    <Check size={14} strokeWidth={3} />
-                    Presente
-                  </button>
-                  <button
-                    onClick={() => pedirMarcacao(c.id, false)}
-                    aria-label="Marcar ausente"
-                    className={`focus-ring flex items-center gap-1 rounded-md px-2.5 py-2 text-[12.5px] font-medium transition-colors ${
-                      c.presente === false
-                        ? "bg-flame-600 text-white"
-                        : "bg-navy-950/5 text-navy-950/50 hover:bg-red-50 hover:text-flame-600"
-                    }`}
-                  >
-                    <X size={14} strokeWidth={3} />
-                    Ausente
-                  </button>
+                  {c.presente === null || emEdicaoIds.has(c.id) ? (
+                    <>
+                      <button
+                        onClick={() => pedirMarcacao(c.id, true)}
+                        aria-label="Marcar presente"
+                        disabled={bloqueado}
+                        className={`focus-ring flex items-center gap-1 rounded-md px-2.5 py-2 text-[12.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                          c.presente === true
+                            ? "bg-emerald-600 text-white"
+                            : "bg-navy-950/5 text-navy-950/50 hover:bg-emerald-50 hover:text-emerald-700"
+                        }`}
+                      >
+                        <Check size={14} strokeWidth={3} />
+                        Presente
+                      </button>
+                      <button
+                        onClick={() => pedirMarcacao(c.id, false)}
+                        aria-label="Marcar ausente"
+                        disabled={bloqueado}
+                        className={`focus-ring flex items-center gap-1 rounded-md px-2.5 py-2 text-[12.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                          c.presente === false
+                            ? "bg-flame-600 text-white"
+                            : "bg-navy-950/5 text-navy-950/50 hover:bg-red-50 hover:text-flame-600"
+                        }`}
+                      >
+                        <X size={14} strokeWidth={3} />
+                        Ausente
+                      </button>
+                      {c.presente !== null && (
+                        <button
+                          onClick={() => fecharEdicao(c.id)}
+                          aria-label="Cancelar alteração"
+                          className="focus-ring rounded-md p-2 text-navy-950/30 hover:bg-navy-950/5 hover:text-navy-950/60"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span
+                        className={`flex items-center gap-1 rounded-md px-2.5 py-2 text-[12.5px] font-medium ${
+                          c.presente
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-red-50 text-flame-600"
+                        }`}
+                      >
+                        {c.presente ? (
+                          <Check size={14} strokeWidth={3} />
+                        ) : (
+                          <X size={14} strokeWidth={3} />
+                        )}
+                        {c.presente ? "Presente" : "Ausente"}
+                      </span>
+                      {!bloqueado && (
+                        <button
+                          onClick={() => abrirEdicao(c.id)}
+                          aria-label="Alterar marcação"
+                          className="focus-ring rounded-md p-2 text-navy-950/30 hover:bg-navy-950/5 hover:text-navy-950/60"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -327,7 +429,8 @@ export function ListaPresenca({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                     }}
-                    className="focus-ring w-full rounded-md border border-navy-900/12 bg-navy-950/[0.02] px-2.5 py-1.5 text-[13px] placeholder:text-navy-950/35"
+                    disabled={bloqueado}
+                    className="focus-ring w-full rounded-md border border-navy-900/12 bg-navy-950/[0.02] px-2.5 py-1.5 text-[13px] placeholder:text-navy-950/35 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
               )}

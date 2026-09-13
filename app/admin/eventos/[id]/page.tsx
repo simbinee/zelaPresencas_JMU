@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { contarPresencasPorCandidato } from "@/lib/contagens";
 import { EditarEventoForm } from "./EditarEventoForm";
 import { ApagarEventoBotao } from "../ApagarEventoBotao";
+import { AlternarMarcacaoAtrasada } from "./AlternarMarcacaoAtrasada";
 import { ListaPresenca } from "@/app/responsavel/eventos/[id]/ListaPresenca";
 import { ChevronLeft } from "lucide-react";
 
@@ -25,6 +26,9 @@ export default async function AdminEventoDetalhe({ params }: { params: { id: str
     prisma.evento.count(),
     contarPresencasPorCandidato(),
   ]);
+
+  const eventoJaPassou = evento.data.getTime() < Date.now();
+  const podeMarcar = !eventoJaPassou || evento.permiteMarcacaoAtrasada;
 
   const candidatosComPresenca = candidatos.map((c) => {
     const marcacao = c.attendances[0];
@@ -68,6 +72,12 @@ export default async function AdminEventoDetalhe({ params }: { params: { id: str
           )}
         </div>
         <div className="flex items-center gap-2">
+          {eventoJaPassou && (
+            <AlternarMarcacaoAtrasada
+              eventoId={evento.id}
+              permiteMarcacaoAtrasadaInicial={evento.permiteMarcacaoAtrasada}
+            />
+          )}
           <EditarEventoForm evento={evento} />
           <ApagarEventoBotao id={evento.id} />
         </div>
@@ -82,6 +92,7 @@ export default async function AdminEventoDetalhe({ params }: { params: { id: str
         candidatosIniciais={candidatosComPresenca}
         totalEventos={totalEventos}
         mostrarAuditoria
+        bloqueado={!podeMarcar}
       />
     </div>
   );
