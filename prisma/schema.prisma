@@ -53,11 +53,6 @@ model Candidato {
   id          String           @id @default(cuid())
   nome        String
   contacto    String?
-  // DEPRECATED: turma antiga em texto livre. Mapeado para a coluna "turma"
-  // já existente na base de dados para não perder os dados de produção —
-  // é lida uma única vez pelo script prisma/migrar-turmas.ts e pode ser
-  // removida (e a coluna eliminada com prisma db push) depois de migrada.
-  turmaTextoAntigo String?     @map("turma")
   turmaId     String?
   turma       Turma?           @relation(fields: [turmaId], references: [id], onDelete: SetNull)
   status      StatusCandidato  @default(ATIVO)
