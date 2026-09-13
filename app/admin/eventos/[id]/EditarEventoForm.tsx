@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { atualizarEventoAction } from "@/app/actions/eventos";
 import { Campo, CampoTexto } from "@/components/Campo";
 import { Botao } from "@/components/Botao";
+import { useToast } from "@/components/Toast";
 import { Pencil, X } from "lucide-react";
 
 function BotaoGuardar() {
@@ -34,6 +35,7 @@ export function EditarEventoForm({
   };
 }) {
   const [aberto, setAberto] = useState(false);
+  const { mostrarToast } = useToast();
 
   if (!aberto) {
     return (
@@ -57,8 +59,13 @@ export function EditarEventoForm({
       </div>
       <form
         action={async (fd) => {
-          await atualizarEventoAction(fd);
-          setAberto(false);
+          try {
+            await atualizarEventoAction(fd);
+            mostrarToast("Alterações guardadas.", "sucesso");
+            setAberto(false);
+          } catch {
+            mostrarToast("Não foi possível guardar as alterações. Tenta novamente.", "erro");
+          }
         }}
         className="grid gap-4 sm:grid-cols-2"
       >

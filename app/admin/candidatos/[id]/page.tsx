@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { EditarCandidatoForm } from "./EditarCandidatoForm";
+import { HistoricoChart } from "./HistoricoChart";
 import { ChevronLeft, Check, X } from "lucide-react";
 
 export default async function CandidatoDetalhe({ params }: { params: { id: string } }) {
@@ -70,7 +71,23 @@ export default async function CandidatoDetalhe({ params }: { params: { id: strin
             Ainda não há presenças marcadas para este candidato.
           </p>
         ) : (
-          <ul className="divide-y divide-navy-900/8">
+          <>
+            {attendances.length > 2 && (
+              <div className="border-b border-navy-900/10 px-5 py-4">
+                <HistoricoChart
+                  dados={[...attendances]
+                    .reverse()
+                    .map((a) => ({
+                      nome: new Date(a.evento.data).toLocaleDateString("pt-PT", {
+                        day: "2-digit",
+                        month: "2-digit",
+                      }),
+                      valor: a.presente ? 1 : 0,
+                    }))}
+                />
+              </div>
+            )}
+            <ul className="divide-y divide-navy-900/8">
             {attendances.map((a) => (
               <li key={a.id} className="flex items-start gap-3 px-5 py-3.5">
                 <span
@@ -97,7 +114,8 @@ export default async function CandidatoDetalhe({ params }: { params: { id: strin
                 </div>
               </li>
             ))}
-          </ul>
+            </ul>
+          </>
         )}
       </div>
     </div>

@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, CalendarDays, ChevronRight } from "lucide-react";
 import { ApagarEventoBotao } from "./ApagarEventoBotao";
+import { Paginacao } from "@/components/Paginacao";
+
+const POR_PAGINA = 15;
 
 type Evento = {
   id: string;
@@ -20,11 +23,23 @@ export function ListaEventos({
   contagens: Record<string, number>;
 }) {
   const [busca, setBusca] = useState("");
+  const [pagina, setPagina] = useState(1);
 
   const filtrados = eventos.filter(
     (e) =>
       e.titulo.toLowerCase().includes(busca.toLowerCase()) ||
       (e.local || "").toLowerCase().includes(busca.toLowerCase())
+  );
+
+  useEffect(() => {
+    setPagina(1);
+  }, [busca]);
+
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const visiveis = filtrados.slice(
+    (paginaSegura - 1) * POR_PAGINA,
+    paginaSegura * POR_PAGINA
   );
 
   return (
@@ -49,7 +64,7 @@ export function ListaEventos({
           </p>
         ) : (
           <ul className="divide-y divide-navy-900/10">
-            {filtrados.map((e) => (
+            {visiveis.map((e) => (
               <li key={e.id} className="flex items-center gap-4 px-5 py-4">
                 <Link
                   href={`/admin/eventos/${e.id}`}
@@ -82,6 +97,14 @@ export function ListaEventos({
           </ul>
         )}
       </div>
+
+      <Paginacao
+        paginaAtual={paginaSegura}
+        totalPaginas={totalPaginas}
+        totalItens={filtrados.length}
+        onMudarPagina={setPagina}
+        itemLabel="eventos"
+      />
     </div>
   );
 }

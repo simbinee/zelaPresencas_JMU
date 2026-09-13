@@ -15,7 +15,12 @@ export default async function AdminEventoDetalhe({ params }: { params: { id: str
     prisma.candidato.findMany({
       where: { status: "ATIVO" },
       orderBy: { nome: "asc" },
-      include: { attendances: { where: { eventoId: params.id } } },
+      include: {
+        attendances: {
+          where: { eventoId: params.id },
+          include: { marcadoPor: { select: { nome: true } } },
+        },
+      },
     }),
     prisma.evento.count(),
     contarPresencasPorCandidato(),
@@ -30,6 +35,8 @@ export default async function AdminEventoDetalhe({ params }: { params: { id: str
       presente: marcacao ? marcacao.presente : null,
       observacao: marcacao?.observacao ?? "",
       totalPresencas: presencasPorCandidato[c.id] ?? 0,
+      marcadoPorNome: marcacao?.marcadoPor?.nome ?? null,
+      marcadoEm: marcacao?.marcadoEm ? marcacao.marcadoEm.toISOString() : null,
     };
   });
 
@@ -74,6 +81,7 @@ export default async function AdminEventoDetalhe({ params }: { params: { id: str
         eventoId={evento.id}
         candidatosIniciais={candidatosComPresenca}
         totalEventos={totalEventos}
+        mostrarAuditoria
       />
     </div>
   );

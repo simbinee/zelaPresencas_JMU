@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { criarEventoAction } from "@/app/actions/eventos";
 import { Campo, CampoTexto } from "@/components/Campo";
 import { Botao } from "@/components/Botao";
+import { useToast } from "@/components/Toast";
 import { Plus, X } from "lucide-react";
 
 function BotaoCriar() {
@@ -19,6 +20,7 @@ function BotaoCriar() {
 export function NovoEventoForm() {
   const [aberto, setAberto] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const { mostrarToast } = useToast();
 
   if (!aberto) {
     return (
@@ -43,9 +45,14 @@ export function NovoEventoForm() {
       <form
         ref={formRef}
         action={async (fd) => {
-          await criarEventoAction(fd);
-          formRef.current?.reset();
-          setAberto(false);
+          try {
+            await criarEventoAction(fd);
+            mostrarToast(`Evento "${fd.get("titulo")}" criado com sucesso.`, "sucesso");
+            formRef.current?.reset();
+            setAberto(false);
+          } catch {
+            mostrarToast("Não foi possível criar o evento. Tenta novamente.", "erro");
+          }
         }}
         className="grid gap-4 sm:grid-cols-2"
       >

@@ -2,28 +2,42 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { StatCard } from "@/components/StatCard";
 import { RelatoriosChart } from "./RelatoriosChart";
+import { EvolucaoChart } from "./EvolucaoChart";
+import { TurmaPieChart } from "./TurmaPieChart";
 import { contarPresencasPorEvento } from "@/lib/contagens";
 import { CalendarDays, ArrowRight } from "lucide-react";
 
 export default async function AdminDashboard() {
   const agora = new Date();
 
-  const [totalCandidatosAtivos, totalResponsaveis, proximosEventos, ultimosEventos, contagens, totalEventos] =
-    await Promise.all([
-      prisma.candidato.count({ where: { status: "ATIVO" } }),
-      prisma.user.count({ where: { role: "RESPONSAVEL" } }),
-      prisma.evento.findMany({
-        where: { data: { gte: agora } },
-        orderBy: { data: "asc" },
-        take: 5,
-      }),
-      prisma.evento.findMany({
-        orderBy: { data: "desc" },
-        take: 6,
-      }),
-      contarPresencasPorEvento(),
-      prisma.evento.count(),
-    ]);
+  const [
+    totalCandidatosAtivos,
+    totalResponsaveis,
+    proximosEventos,
+    ultimosEventos,
+    contagens,
+    totalEventos,
+    candidatosPorTurma,
+  ] = await Promise.all([
+    prisma.candidato.count({ where: { status: "ATIVO" } }),
+    prisma.user.count({ where: { role: "RESPONSAVEL" } }),
+    prisma.evento.findMany({
+      where: { data: { gte: agora } },
+      orderBy: { data: "asc" },
+      take: 5,
+    }),
+    prisma.evento.findMany({
+      orderBy: { data: "desc" },
+      take: 6,
+    }),
+    contarPresencasPorEvento(),
+    prisma.evento.count(),
+    prisma.candidato.groupBy({
+      by: ["turma"],
+      where: { status: "ATIVO" },
+      _count: { _all: true },
+    }),
+  ]);
 
   const dadosGrafico = [...ultimosEventos]
     .reverse()
@@ -31,6 +45,20 @@ export default async function AdminDashboard() {
       nome: new Date(e.data).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" }),
       presencas: contagens[e.id] ?? 0,
     }));
+
+  const dadosEvolucao = [...ultimosEventos]
+    .reverse()
+    .map((e) => ({
+      nome: new Date(e.data).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" }),
+      percentagem:
+        totalCandidatosAtivos > 0
+          ? Math.round(((contagens[e.id] ?? 0) / totalCandidatosAtivos) * 100)
+          : 0,
+    }));
+
+  const dadosTurma = candidatosPorTurma
+    .map((g) => ({ nome: g.turma || "Sem turma", total: g._count._all }))
+    .sort((a, b) => b.total - a.total);
 
   return (
     <div className="space-y-10">
@@ -62,12 +90,38 @@ export default async function AdminDashboard() {
       </div>
 
       {dadosGrafico.length > 0 && (
-        <div className="rounded-xl border border-navy-900/10 bg-white p-5">
-          <h2 className="mb-1 font-display text-lg font-semibold text-navy-950">
-            Presenças por evento
-          </h2>
-          <p className="mb-4 text-[13px] text-navy-950/50">Eventos mais recentes, do mais antigo ao mais recente.</p>
-          <RelatoriosChart dados={dadosGrafico} />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-xl border border-navy-900/10 bg-white p-5">
+            <h2 className="mb-1 font-display text-lg font-semibold text-navy-950">
+              Presenças por evento
+            </h2>
+            <p className="mb-4 text-[13px] text-navy-950/50">
+              Número de presentes em cada evento recente.
+            </p>
+            <RelatoriosChart dados={dadosGrafico} />
+          </div>
+
+          <div className="rounded-xl border border-navy-900/10 bg-white p-5">
+            <h2 className="mb-1 font-display text-lg font-semibold text-navy-950">
+              Evolução da assiduidade
+            </h2>
+            <p className="mb-4 text-[13px] text-navy-950/50">
+              Percentagem de presentes face ao total de candidatos ativos.
+            </p>
+            <EvolucaoChart dados={dadosEvolucao} />
+          </div>
+
+          {dadosTurma.length > 1 && (
+            <div className="rounded-xl border border-navy-900/10 bg-white p-5 lg:col-span-2">
+              <h2 className="mb-1 font-display text-lg font-semibold text-navy-950">
+                Candidatos por turma
+              </h2>
+              <p className="mb-4 text-[13px] text-navy-950/50">
+                Como os candidatos ativos estão distribuídos por turma.
+              </p>
+              <TurmaPieChart dados={dadosTurma} />
+            </div>
+          )}
         </div>
       )}
 

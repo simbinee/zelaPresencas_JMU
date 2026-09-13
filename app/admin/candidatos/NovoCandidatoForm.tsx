@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { criarCandidatoAction } from "@/app/actions/candidatos";
 import { Campo } from "@/components/Campo";
 import { Botao } from "@/components/Botao";
+import { useToast } from "@/components/Toast";
 import { Plus, X } from "lucide-react";
 
 function BotaoCriar() {
@@ -19,6 +20,7 @@ function BotaoCriar() {
 export function NovoCandidatoForm() {
   const [aberto, setAberto] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const { mostrarToast } = useToast();
 
   if (!aberto) {
     return (
@@ -43,9 +45,14 @@ export function NovoCandidatoForm() {
       <form
         ref={formRef}
         action={async (fd) => {
-          await criarCandidatoAction(fd);
-          formRef.current?.reset();
-          setAberto(false);
+          try {
+            await criarCandidatoAction(fd);
+            mostrarToast(`${fd.get("nome")} adicionado(a) com sucesso.`, "sucesso");
+            formRef.current?.reset();
+            setAberto(false);
+          } catch {
+            mostrarToast("Não foi possível adicionar o candidato. Tenta novamente.", "erro");
+          }
         }}
         className="grid gap-4 sm:grid-cols-3"
       >

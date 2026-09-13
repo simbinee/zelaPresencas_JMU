@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { StatCard } from "@/components/StatCard";
 import { TabelaRelatorios } from "./TabelaRelatorios";
+import { TurmaBarChart } from "./TurmaBarChart";
 
 const LIMIAR_RISCO = 75;
 
@@ -30,6 +31,19 @@ export default async function RelatoriosPage() {
 
   const totalEmRisco = linhas.filter((l) => l.percentagem < LIMIAR_RISCO).length;
 
+  const porTurma = new Map<string, number[]>();
+  for (const l of linhas) {
+    const chave = l.turma || "Sem turma";
+    if (!porTurma.has(chave)) porTurma.set(chave, []);
+    porTurma.get(chave)!.push(l.percentagem);
+  }
+  const dadosTurma = Array.from(porTurma.entries())
+    .map(([turma, valores]) => ({
+      turma,
+      media: Math.round(valores.reduce((a, b) => a + b, 0) / valores.length),
+    }))
+    .sort((a, b) => b.media - a.media);
+
   return (
     <div className="space-y-6">
       <div>
@@ -57,7 +71,20 @@ export default async function RelatoriosPage() {
           Ainda não há dados suficientes. Cria eventos e regista presenças para veres o relatório aqui.
         </div>
       ) : (
-        <TabelaRelatorios linhas={linhas} totalEventos={totalEventos} />
+        <>
+          {dadosTurma.length > 1 && (
+            <div className="rounded-xl border border-navy-900/10 bg-white p-5">
+              <h2 className="mb-1 font-display text-lg font-semibold text-navy-950">
+                Assiduidade média por turma
+              </h2>
+              <p className="mb-4 text-[13px] text-navy-950/50">
+                Ajuda a identificar que turmas precisam de mais atenção.
+              </p>
+              <TurmaBarChart dados={dadosTurma} />
+            </div>
+          )}
+          <TabelaRelatorios linhas={linhas} totalEventos={totalEventos} />
+        </>
       )}
     </div>
   );

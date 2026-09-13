@@ -52,3 +52,14 @@ export async function marcarTodosAction(
   revalidatePath("/admin/relatorios");
   revalidatePath("/admin");
 }
+
+export async function removerMarcacaoAction(eventoId: string, candidatoId: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Não autorizado.");
+
+  await prisma.attendance.deleteMany({ where: { eventoId, candidatoId } });
+
+  revalidatePath(`/responsavel/eventos/${eventoId}`);
+  revalidatePath("/admin/relatorios");
+  revalidatePath("/admin");
+}

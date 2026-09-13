@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { atualizarCandidatoAction } from "@/app/actions/candidatos";
 import { Campo } from "@/components/Campo";
 import { Botao } from "@/components/Botao";
+import { useToast } from "@/components/Toast";
 import { Pencil, X } from "lucide-react";
 
 function BotaoGuardar() {
@@ -22,6 +23,7 @@ export function EditarCandidatoForm({
   candidato: { id: string; nome: string; contacto: string | null; turma: string | null };
 }) {
   const [aberto, setAberto] = useState(false);
+  const { mostrarToast } = useToast();
 
   if (!aberto) {
     return (
@@ -45,8 +47,13 @@ export function EditarCandidatoForm({
       </div>
       <form
         action={async (fd) => {
-          await atualizarCandidatoAction(fd);
-          setAberto(false);
+          try {
+            await atualizarCandidatoAction(fd);
+            mostrarToast("Alterações guardadas.", "sucesso");
+            setAberto(false);
+          } catch {
+            mostrarToast("Não foi possível guardar as alterações. Tenta novamente.", "erro");
+          }
         }}
         className="grid gap-4 sm:grid-cols-3"
       >

@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { LinhaCandidato } from "./LinhaCandidato";
+import { Paginacao } from "@/components/Paginacao";
+
+const POR_PAGINA = 20;
 
 type Candidato = {
   id: string;
@@ -15,6 +18,7 @@ type Candidato = {
 export function ListaCandidatos({ candidatos }: { candidatos: Candidato[] }) {
   const [busca, setBusca] = useState("");
   const [turmaSelecionada, setTurmaSelecionada] = useState<string | null>(null);
+  const [pagina, setPagina] = useState(1);
 
   const turmas = useMemo(() => {
     const unicas = new Set(
@@ -28,6 +32,18 @@ export function ListaCandidatos({ candidatos }: { candidatos: Candidato[] }) {
     const combinaTurma = !turmaSelecionada || c.turma === turmaSelecionada;
     return combinaBusca && combinaTurma;
   });
+
+  // Volta à primeira página sempre que o filtro muda a lista.
+  useEffect(() => {
+    setPagina(1);
+  }, [busca, turmaSelecionada]);
+
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const visiveis = filtrados.slice(
+    (paginaSegura - 1) * POR_PAGINA,
+    paginaSegura * POR_PAGINA
+  );
 
   return (
     <div className="space-y-3">
@@ -91,7 +107,7 @@ export function ListaCandidatos({ candidatos }: { candidatos: Candidato[] }) {
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((c) => (
+                {visiveis.map((c) => (
                   <LinhaCandidato
                     key={c.id}
                     id={c.id}
@@ -106,6 +122,14 @@ export function ListaCandidatos({ candidatos }: { candidatos: Candidato[] }) {
           </div>
         )}
       </div>
+
+      <Paginacao
+        paginaAtual={paginaSegura}
+        totalPaginas={totalPaginas}
+        totalItens={filtrados.length}
+        onMudarPagina={setPagina}
+        itemLabel="candidatos"
+      />
     </div>
   );
 }

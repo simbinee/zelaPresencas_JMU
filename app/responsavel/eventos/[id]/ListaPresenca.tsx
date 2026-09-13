@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Check, X, Search, MessageSquarePlus } from "lucide-react";
-import { marcarPresencaAction, marcarTodosAction } from "@/app/actions/attendance";
+import { Check, X, Search, MessageSquarePlus, UserCheck } from "lucide-react";
+import { marcarPresencaAction, marcarTodosAction, removerMarcacaoAction } from "@/app/actions/attendance";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 
 type Candidato = {
   id: string;
@@ -11,21 +13,33 @@ type Candidato = {
   presente: boolean | null;
   observacao: string;
   totalPresencas: number;
+  marcadoPorNome?: string | null;
+  marcadoEm?: string | null;
 };
+
+type Confirmacao =
+  | { tipo: "mudar"; candidatoId: string; nome: string; novoValor: boolean }
+  | { tipo: "remover"; candidatoId: string; nome: string }
+  | { tipo: "todos"; presente: boolean; quantidade: number }
+  | null;
 
 export function ListaPresenca({
   eventoId,
   candidatosIniciais,
   totalEventos,
+  mostrarAuditoria = false,
 }: {
   eventoId: string;
   candidatosIniciais: Candidato[];
   totalEventos: number;
+  mostrarAuditoria?: boolean;
 }) {
   const [candidatos, setCandidatos] = useState(candidatosIniciais);
   const [busca, setBusca] = useState("");
   const [turmaSelecionada, setTurmaSelecionada] = useState<string | null>(null);
+  const [confirmacao, setConfirmacao] = useState<Confirmacao>(null);
   const [, startTransition] = useTransition();
+  const { mostrarToast } = useToast();
 
   const turmas = useMemo(() => {
     const unicas = new Set(
@@ -46,30 +60,125 @@ export function ListaPresenca({
   const percentagem =
     candidatos.length > 0 ? Math.round((totalPresentes / candidatos.length) * 100) : 0;
 
-  function marcar(id: string, presente: boolean) {
+  function aplicarMarcacao(id: string, presente: boolean) {
+    const atual = candidatos.find((c) => c.id === id);
+    const presenteAnterior = atual?.presente ?? null;
     setCandidatos((prev) => prev.map((c) => (c.id === id ? { ...c, presente } : c)));
     startTransition(() => {
-      const atual = candidatos.find((c) => c.id === id);
-      marcarPresencaAction(eventoId, id, presente, atual?.observacao || undefined);
+      void (async () => {
+        try {
+          await marcarPresencaAction(eventoId, id, presente, atual?.observacao || undefined);
+          mostrarToast(
+            `${atual?.nome ?? "Candidato"} marcado${presente ? " como presente" : " como ausente"}.`,
+            "sucesso"
+          );
+        } catch {
+          setCandidatos((prev) =>
+            prev.map((c) => (c.id === id ? { ...c, presente: presenteAnterior } : c))
+          );
+          mostrarToast("Não foi possível guardar a marcação. Tenta novamente.", "erro");
+        }
+      })();
     });
+  }
+
+  function aplicarRemocao(id: string) {
+    const atual = candidatos.find((c) => c.id === id);
+    setCandidatos((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, presente: null, observacao: "" } : c))
+    );
+    startTransition(() => {
+      void (async () => {
+        try {
+          await removerMarcacaoAction(eventoId, id);
+          mostrarToast(`Marcação de ${atual?.nome ?? "candidato"} removida.`, "info");
+        } catch {
+          setCandidatos((prev) =>
+            prev.map((c) =>
+              c.id === id ? { ...c, presente: atual?.presente ?? null, observacao: atual?.observacao ?? "" } : c
+            )
+          );
+          mostrarToast("Não foi possível remover a marcação. Tenta novamente.", "erro");
+        }
+      })();
+    });
+  }
+
+  function pedirMarcacao(id: string, novoValor: boolean) {
+    const candidato = candidatos.find((c) => c.id === id);
+    if (!candidato) return;
+
+    if (candidato.presente === null) {
+      // primeira marcação — aplica logo, sem perguntar
+      aplicarMarcacao(id, novoValor);
+      return;
+    }
+
+    if (candidato.presente === novoValor) {
+      // clicar outra vez na mesma opção → perguntar se quer remover a marcação
+      setConfirmacao({ tipo: "remover", candidatoId: id, nome: candidato.nome });
+    } else {
+      // mudar de opção → perguntar se quer mesmo alterar
+      setConfirmacao({ tipo: "mudar", candidatoId: id, nome: candidato.nome, novoValor });
+    }
   }
 
   function guardarNota(id: string, observacao: string) {
     setCandidatos((prev) => prev.map((c) => (c.id === id ? { ...c, observacao } : c)));
     const atual = candidatos.find((c) => c.id === id);
     startTransition(() => {
-      marcarPresencaAction(eventoId, id, atual?.presente ?? false, observacao || undefined);
+      void (async () => {
+        try {
+          await marcarPresencaAction(eventoId, id, atual?.presente ?? false, observacao || undefined);
+          mostrarToast("Nota guardada.", "sucesso");
+        } catch {
+          mostrarToast("Não foi possível guardar a nota. Tenta novamente.", "erro");
+        }
+      })();
     });
   }
 
-  function marcarTodosVisiveis(presente: boolean) {
-    const ids = filtrados.map((c) => c.id);
-    setCandidatos((prev) =>
-      prev.map((c) => (ids.includes(c.id) ? { ...c, presente } : c))
-    );
-    startTransition(() => {
-      marcarTodosAction(eventoId, ids, presente);
-    });
+  function pedirMarcarTodosVisiveis(presente: boolean) {
+    setConfirmacao({ tipo: "todos", presente, quantidade: filtrados.length });
+  }
+
+  function confirmar() {
+    if (!confirmacao) return;
+
+    if (confirmacao.tipo === "mudar") {
+      aplicarMarcacao(confirmacao.candidatoId, confirmacao.novoValor);
+    } else if (confirmacao.tipo === "remover") {
+      aplicarRemocao(confirmacao.candidatoId);
+    } else if (confirmacao.tipo === "todos") {
+      const ids = filtrados.map((c) => c.id);
+      const anteriores = candidatos.filter((c) => ids.includes(c.id));
+      setCandidatos((prev) =>
+        prev.map((c) => (ids.includes(c.id) ? { ...c, presente: confirmacao.presente } : c))
+      );
+      startTransition(() => {
+        void (async () => {
+          try {
+            await marcarTodosAction(eventoId, ids, confirmacao.presente);
+            mostrarToast(
+              `${ids.length} candidato(s) marcado(s) como ${
+                confirmacao.presente ? "presentes" : "ausentes"
+              }.`,
+              "sucesso"
+            );
+          } catch {
+            setCandidatos((prev) =>
+              prev.map((c) => {
+                const original = anteriores.find((a) => a.id === c.id);
+                return original ? { ...c, presente: original.presente } : c;
+              })
+            );
+            mostrarToast("Não foi possível aplicar a marcação em massa. Tenta novamente.", "erro");
+          }
+        })();
+      });
+    }
+
+    setConfirmacao(null);
   }
 
   return (
@@ -93,13 +202,13 @@ export function ListaPresenca({
 
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => marcarTodosVisiveis(true)}
+          onClick={() => pedirMarcarTodosVisiveis(true)}
           className="focus-ring rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] font-medium text-emerald-700 hover:bg-emerald-100"
         >
           Marcar todos presentes
         </button>
         <button
-          onClick={() => marcarTodosVisiveis(false)}
+          onClick={() => pedirMarcarTodosVisiveis(false)}
           className="focus-ring rounded-md border border-navy-900/15 bg-white px-3 py-2 text-[13px] font-medium text-navy-950/60 hover:bg-navy-950/[0.03]"
         >
           Marcar todos ausentes
@@ -164,11 +273,25 @@ export function ListaPresenca({
                     {c.turma ? `${c.turma} · ` : ""}
                     {c.totalPresencas}/{totalEventos} eventos ao todo
                   </p>
+                  {mostrarAuditoria && c.presente !== null && c.marcadoPorNome && (
+                    <p className="mt-0.5 flex items-center gap-1 text-[11.5px] text-navy-950/35">
+                      <UserCheck size={11} className="shrink-0" />
+                      Marcado por {c.marcadoPorNome}
+                      {c.marcadoEm
+                        ? ` às ${new Date(c.marcadoEm).toLocaleString("pt-PT", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}`
+                        : ""}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1.5">
                   <button
-                    onClick={() => marcar(c.id, true)}
+                    onClick={() => pedirMarcacao(c.id, true)}
                     aria-label="Marcar presente"
                     className={`focus-ring flex items-center gap-1 rounded-md px-2.5 py-2 text-[12.5px] font-medium transition-colors ${
                       c.presente === true
@@ -180,7 +303,7 @@ export function ListaPresenca({
                     Presente
                   </button>
                   <button
-                    onClick={() => marcar(c.id, false)}
+                    onClick={() => pedirMarcacao(c.id, false)}
                     aria-label="Marcar ausente"
                     className={`focus-ring flex items-center gap-1 rounded-md px-2.5 py-2 text-[12.5px] font-medium transition-colors ${
                       c.presente === false
@@ -212,6 +335,36 @@ export function ListaPresenca({
           ))
         )}
       </ul>
+
+      <ConfirmDialog
+        aberto={confirmacao !== null}
+        titulo={
+          confirmacao?.tipo === "remover"
+            ? "Remover marcação"
+            : confirmacao?.tipo === "todos"
+            ? confirmacao.presente
+              ? "Marcar todos como presentes"
+              : "Marcar todos como ausentes"
+            : "Alterar presença"
+        }
+        mensagem={
+          confirmacao?.tipo === "remover"
+            ? `${confirmacao.nome} está marcado(a) — queres voltar a deixar por marcar?`
+            : confirmacao?.tipo === "todos"
+            ? `Isto vai marcar ${confirmacao.quantidade} candidato(s) como ${
+                confirmacao.presente ? "presentes" : "ausentes"
+              }, substituindo o que já estava marcado. Confirmas?`
+            : confirmacao?.tipo === "mudar"
+            ? `${confirmacao.nome} já está marcado(a) como ${
+                confirmacao.novoValor ? "ausente" : "presente"
+              }. Queres mudar para ${confirmacao.novoValor ? "presente" : "ausente"}?`
+            : ""
+        }
+        confirmLabel="Sim, confirmar"
+        cancelarLabel="Cancelar"
+        onConfirm={confirmar}
+        onCancel={() => setConfirmacao(null)}
+      />
     </div>
   );
 }
