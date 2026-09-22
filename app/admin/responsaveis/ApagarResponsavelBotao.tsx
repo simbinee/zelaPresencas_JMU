@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2, Loader2 } from "lucide-react";
 import { apagarResponsavelAction } from "@/app/actions/responsaveis";
 import { useToast } from "@/components/Toast";
@@ -8,6 +9,7 @@ import { useToast } from "@/components/Toast";
 export function ApagarResponsavelBotao({ id, nome }: { id: string; nome: string }) {
   const { mostrarToast } = useToast();
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function apagar() {
     if (!confirm(`Remover o acesso de ${nome}?`)) return;
@@ -19,9 +21,15 @@ export function ApagarResponsavelBotao({ id, nome }: { id: string; nome: string 
       void (async () => {
         try {
           await apagarResponsavelAction(formData);
+          router.refresh();
           mostrarToast(`Acesso de ${nome} removido.`, "info");
-        } catch {
-          mostrarToast("Não foi possível remover o acesso. Tenta novamente.", "erro");
+        } catch (error) {
+          mostrarToast(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível remover o acesso. Tenta novamente.",
+            "erro"
+          );
         }
       })();
     });

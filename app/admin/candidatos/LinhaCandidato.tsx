@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2, Loader2 } from "lucide-react";
 import { alternarStatusCandidatoAction, apagarCandidatoAction } from "@/app/actions/candidatos";
@@ -20,6 +21,7 @@ export function LinhaCandidato({
   status: "ATIVO" | "INATIVO";
 }) {
   const { mostrarToast } = useToast();
+  const router = useRouter();
   const [pendingStatus, startStatusTransition] = useTransition();
   const [pendingApagar, startApagarTransition] = useTransition();
 
@@ -32,12 +34,13 @@ export function LinhaCandidato({
       void (async () => {
         try {
           await alternarStatusCandidatoAction(formData);
+          router.refresh();
           mostrarToast(
             `${nome} marcado como ${status === "ATIVO" ? "inativo" : "ativo"}.`,
             "sucesso"
           );
-        } catch {
-          mostrarToast("Não foi possível alterar o estado. Tenta novamente.", "erro");
+        } catch (error) {
+          mostrarToast(error instanceof Error ? error.message : "Não foi possível alterar o estado. Tenta novamente.", "erro");
         }
       })();
     });
@@ -53,9 +56,10 @@ export function LinhaCandidato({
       void (async () => {
         try {
           await apagarCandidatoAction(formData);
+          router.refresh();
           mostrarToast(`${nome} removido da lista.`, "info");
-        } catch {
-          mostrarToast("Não foi possível remover o candidato. Tenta novamente.", "erro");
+        } catch (error) {
+          mostrarToast(error instanceof Error ? error.message : "Não foi possível remover o candidato. Tenta novamente.", "erro");
         }
       })();
     });

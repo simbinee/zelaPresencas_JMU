@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { criarCandidatoAction } from "@/app/actions/candidatos";
 import { Campo } from "@/components/Campo";
@@ -22,6 +23,7 @@ function BotaoCriar() {
 export function NovoCandidatoForm({ turmas }: { turmas: TurmaParaSelecao[] }) {
   const [aberto, setAberto] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   const { mostrarToast } = useToast();
 
   if (!aberto) {
@@ -49,6 +51,7 @@ export function NovoCandidatoForm({ turmas }: { turmas: TurmaParaSelecao[] }) {
         action={async (fd) => {
           try {
             await criarCandidatoAction(fd);
+            router.refresh();
             mostrarToast(`${fd.get("nome")} adicionado(a) com sucesso.`, "sucesso");
             formRef.current?.reset();
             setAberto(false);

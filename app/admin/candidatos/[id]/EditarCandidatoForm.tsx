@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { atualizarCandidatoAction } from "@/app/actions/candidatos";
 import { Campo } from "@/components/Campo";
@@ -28,6 +29,7 @@ export function EditarCandidatoForm({
 }) {
   const [aberto, setAberto] = useState(false);
   const { mostrarToast } = useToast();
+  const router = useRouter();
 
   if (!aberto) {
     return (
@@ -53,10 +55,16 @@ export function EditarCandidatoForm({
         action={async (fd) => {
           try {
             await atualizarCandidatoAction(fd);
+            router.refresh();
             mostrarToast("Alterações guardadas.", "sucesso");
             setAberto(false);
-          } catch {
-            mostrarToast("Não foi possível guardar as alterações. Tenta novamente.", "erro");
+          } catch (error) {
+            mostrarToast(
+              error instanceof Error
+                ? error.message
+                : "Não foi possível guardar as alterações. Tenta novamente.",
+              "erro"
+            );
           }
         }}
         className="grid gap-4 sm:grid-cols-3"

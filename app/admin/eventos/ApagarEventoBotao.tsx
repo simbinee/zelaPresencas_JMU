@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2, Loader2 } from "lucide-react";
 import { apagarEventoAction } from "@/app/actions/eventos";
 import { useToast } from "@/components/Toast";
@@ -9,6 +10,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 export function ApagarEventoBotao({ id }: { id: string }) {
   const { mostrarToast } = useToast();
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
   const [confirmarAberto, setConfirmarAberto] = useState(false);
 
   function apagar() {
@@ -20,10 +22,13 @@ export function ApagarEventoBotao({ id }: { id: string }) {
       void (async () => {
         try {
           await apagarEventoAction(formData);
+          router.refresh();
           mostrarToast("Evento e todas as presenças associadas foram apagados.", "info");
-        } catch {
+        } catch (error) {
           mostrarToast(
-            "Não foi possível apagar o evento. Verifica a ligação e tenta novamente.",
+            error instanceof Error
+              ? error.message
+              : "Não foi possível apagar o evento. Verifica a ligação e tenta novamente.",
             "erro"
           );
         }

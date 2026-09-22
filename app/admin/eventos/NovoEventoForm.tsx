@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { criarEventoAction } from "@/app/actions/eventos";
 import { Campo, CampoTexto } from "@/components/Campo";
@@ -20,6 +21,7 @@ function BotaoCriar() {
 export function NovoEventoForm() {
   const [aberto, setAberto] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   const { mostrarToast } = useToast();
 
   if (!aberto) {
@@ -47,11 +49,15 @@ export function NovoEventoForm() {
         action={async (fd) => {
           try {
             await criarEventoAction(fd);
+            router.refresh();
             mostrarToast(`Evento "${fd.get("titulo")}" criado com sucesso.`, "sucesso");
             formRef.current?.reset();
             setAberto(false);
-          } catch {
-            mostrarToast("Não foi possível criar o evento. Tenta novamente.", "erro");
+          } catch (error) {
+            mostrarToast(
+              error instanceof Error ? error.message : "Não foi possível criar o evento. Tenta novamente.",
+              "erro"
+            );
           }
         }}
         className="grid gap-4 sm:grid-cols-2"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { criarAnoLetivoAction } from "@/app/actions/turmas";
 import { Campo } from "@/components/Campo";
@@ -20,6 +21,7 @@ function BotaoCriar() {
 export function NovoAnoForm() {
   const [aberto, setAberto] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   const { mostrarToast } = useToast();
 
   if (!aberto) {
@@ -47,6 +49,7 @@ export function NovoAnoForm() {
         action={async (fd) => {
           try {
             await criarAnoLetivoAction(fd);
+            router.refresh();
             mostrarToast(`Ano letivo "${fd.get("nome")}" criado.`, "sucesso");
             formRef.current?.reset();
             setAberto(false);

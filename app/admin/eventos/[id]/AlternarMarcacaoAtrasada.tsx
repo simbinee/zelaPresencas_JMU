@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, LockOpen, Lock } from "lucide-react";
 import { alternarMarcacaoAtrasadaAction } from "@/app/actions/eventos";
 import { useToast } from "@/components/Toast";
@@ -15,6 +16,7 @@ export function AlternarMarcacaoAtrasada({
   const [permite, setPermite] = useState(permiteMarcacaoAtrasadaInicial);
   const [pending, startTransition] = useTransition();
   const { mostrarToast } = useToast();
+  const router = useRouter();
 
   function alternar() {
     const novoValor = !permite;
@@ -25,15 +27,21 @@ export function AlternarMarcacaoAtrasada({
       void (async () => {
         try {
           await alternarMarcacaoAtrasadaAction(eventoId, novoValor);
+          router.refresh();
           mostrarToast(
             novoValor
               ? "Exceção ativada — já é possível marcar presenças neste evento passado."
               : "Exceção desativada — a marcação de presenças voltou a ficar bloqueada.",
             novoValor ? "sucesso" : "info"
           );
-        } catch {
+        } catch (error) {
           setPermite(anterior);
-          mostrarToast("Não foi possível atualizar a exceção. Tenta novamente.", "erro");
+          mostrarToast(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível atualizar a exceção. Tenta novamente.",
+            "erro"
+          );
         }
       })();
     });

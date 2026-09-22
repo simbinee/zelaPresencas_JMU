@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Check, X, Search, MessageSquarePlus, UserCheck, Lock, Pencil } from "lucide-react";
 import { marcarPresencaAction, marcarTodosAction, removerMarcacaoAction } from "@/app/actions/attendance";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -51,6 +52,7 @@ export function ListaPresenca({
   const [confirmacao, setConfirmacao] = useState<Confirmacao>(null);
   const [emEdicaoIds, setEmEdicaoIds] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
+  const router = useRouter();
   const { mostrarToast } = useToast();
 
   function abrirEdicao(id: string) {
@@ -108,6 +110,7 @@ export function ListaPresenca({
       void (async () => {
         try {
           await marcarPresencaAction(eventoId, id, presente, atual?.observacao || undefined);
+          router.refresh();
           mostrarToast(
             `${atual?.nome ?? "Candidato"} marcado${presente ? " como presente" : " como ausente"}.`,
             "sucesso"
@@ -132,6 +135,7 @@ export function ListaPresenca({
       void (async () => {
         try {
           await removerMarcacaoAction(eventoId, id);
+          router.refresh();
           mostrarToast(`Marcação de ${atual?.nome ?? "candidato"} removida.`, "info");
         } catch (erro) {
           setCandidatos((prev) =>
@@ -227,6 +231,7 @@ export function ListaPresenca({
         void (async () => {
           try {
             await marcarTodosAction(eventoId, ids, confirmacao.presente);
+            router.refresh();
             mostrarToast(
               `${ids.length} candidato(s) marcado(s) como ${
                 confirmacao.presente ? "presentes" : "ausentes"

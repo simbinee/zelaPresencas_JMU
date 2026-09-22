@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import { criarResponsavelAction, CriarResponsavelState } from "@/app/actions/responsaveis";
 import { Campo } from "@/components/Campo";
@@ -22,6 +23,11 @@ export function NovoResponsavelForm() {
     criarResponsavelAction,
     null
   );
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state?.success) router.refresh();
+  }, [state?.success, router]);
 
   if (!aberto) {
     return (

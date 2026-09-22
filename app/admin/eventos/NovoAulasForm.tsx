@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { criarAulasAction } from "@/app/actions/eventos";
 import { Campo, CampoTexto } from "@/components/Campo";
@@ -20,6 +21,7 @@ function BotaoCriarAulas() {
 export function NovoAulasForm() {
   const [aberto, setAberto] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   const { mostrarToast } = useToast();
 
   if (!aberto) {
@@ -51,6 +53,7 @@ export function NovoAulasForm() {
         action={async (fd) => {
           try {
             const total = await criarAulasAction(fd);
+            router.refresh();
             mostrarToast(
               total > 0 ? `${total} aulas criadas com sucesso.` : "Essas aulas já estavam criadas.",
               "sucesso"

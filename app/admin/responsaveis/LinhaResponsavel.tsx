@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import { UserCog, KeyRound, X } from "lucide-react";
 import { ApagarResponsavelBotao } from "./ApagarResponsavelBotao";
@@ -23,6 +24,11 @@ export function LinhaResponsavel({ id, nome, username }: { id: string; nome: str
     redefinirPasswordAction,
     null
   );
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state?.success) router.refresh();
+  }, [state?.success, router]);
 
   return (
     <li className="px-5 py-4">
