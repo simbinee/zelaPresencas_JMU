@@ -40,26 +40,31 @@ export async function marcarPresencaAction(
   presente: boolean,
   observacao?: string
 ) {
-  const session = await getSession();
-  if (!session) throw new Error("Não autorizado.");
-  await garantirQuePodeMarcar(eventoId);
-  await garantirRegistosValidos(eventoId, [candidatoId]);
+  try {
+    const session = await getSession();
+    if (!session) throw new Error("Não autorizado.");
+    await garantirQuePodeMarcar(eventoId);
+    await garantirRegistosValidos(eventoId, [candidatoId]);
 
-  await prisma.attendance.upsert({
-    where: { eventoId_candidatoId: { eventoId, candidatoId } },
-    update: { presente, observacao: observacao ?? null, marcadoPorId: session.sub },
-    create: {
-      eventoId,
-      candidatoId,
-      presente,
-      observacao: observacao ?? null,
-      marcadoPorId: session.sub,
-    },
-  });
+    await prisma.attendance.upsert({
+      where: { eventoId_candidatoId: { eventoId, candidatoId } },
+      update: { presente, observacao: observacao ?? null, marcadoPorId: session.sub },
+      create: {
+        eventoId,
+        candidatoId,
+        presente,
+        observacao: observacao ?? null,
+        marcadoPorId: session.sub,
+      },
+    });
 
-  revalidatePath(`/responsavel/eventos/${eventoId}`);
-  revalidatePath("/admin/relatorios");
-  revalidatePath("/admin");
+    revalidatePath(`/responsavel/eventos/${eventoId}`);
+    revalidatePath("/admin/relatorios");
+    revalidatePath("/admin");
+  } catch (error) {
+    console.error("Falha ao marcar presença", { eventoId, candidatoId, error });
+    throw error;
+  }
 }
 
 export async function marcarTodosAction(
