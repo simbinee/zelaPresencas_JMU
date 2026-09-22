@@ -33,13 +33,16 @@ export function ListaPresenca({
   totalEventos,
   mostrarAuditoria = false,
   bloqueado = false,
+  bloqueioFuturo = false,
 }: {
   eventoId: string;
   candidatosIniciais: Candidato[];
   totalEventos: number;
   mostrarAuditoria?: boolean;
-  /** true quando o evento já passou e a marcação não foi liberada pelo admin para este evento */
+  /** true quando a marcação está bloqueada */
   bloqueado?: boolean;
+  /** true quando o evento ainda não começou */
+  bloqueioFuturo?: boolean;
 }) {
   const [candidatos, setCandidatos] = useState(candidatosIniciais);
   const [busca, setBusca] = useState("");
@@ -145,7 +148,9 @@ export function ListaPresenca({
   function pedirMarcacao(id: string, novoValor: boolean) {
     if (bloqueado) {
       mostrarToast(
-        "Este evento já passou. Pede a um admin para ativar a exceção neste evento.",
+        bloqueioFuturo
+          ? "A marcação só fica disponível quando a aula começar."
+          : "Este evento já passou. Pede a um admin para ativar a exceção neste evento.",
         "erro"
       );
       return;
@@ -171,7 +176,9 @@ export function ListaPresenca({
   function guardarNota(id: string, observacao: string) {
     if (bloqueado) {
       mostrarToast(
-        "Este evento já passou. Pede a um admin para ativar a exceção neste evento.",
+        bloqueioFuturo
+          ? "A marcação só fica disponível quando a aula começar."
+          : "Este evento já passou. Pede a um admin para ativar a exceção neste evento.",
         "erro"
       );
       return;
@@ -193,7 +200,9 @@ export function ListaPresenca({
   function pedirMarcarTodosVisiveis(presente: boolean) {
     if (bloqueado) {
       mostrarToast(
-        "Este evento já passou. Pede a um admin para ativar a exceção neste evento.",
+        bloqueioFuturo
+          ? "A marcação só fica disponível quando a aula começar."
+          : "Este evento já passou. Pede a um admin para ativar a exceção neste evento.",
         "erro"
       );
       return;
@@ -249,10 +258,13 @@ export function ListaPresenca({
         <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
           <Lock size={16} className="mt-0.5 shrink-0" />
           <p className="text-[13.5px] leading-snug">
-            Este evento já passou, por isso a marcação de presenças está bloqueada.
-            {mostrarAuditoria
-              ? " Usa o botão acima para ativar a exceção neste evento, se precisares de corrigir algo."
-              : " Pede a um admin para ativar a exceção neste evento, se precisares de corrigir algo."}
+            {bloqueioFuturo
+              ? "Esta aula ainda não começou, por isso a marcação de presenças está bloqueada."
+              : "Este evento já passou, por isso a marcação de presenças está bloqueada."}
+            {!bloqueioFuturo &&
+              (mostrarAuditoria
+                ? " Usa o botão acima para ativar a exceção neste evento, se precisares de corrigir algo."
+                : " Pede a um admin para ativar a exceção neste evento, se precisares de corrigir algo.")}
           </p>
         </div>
       )}

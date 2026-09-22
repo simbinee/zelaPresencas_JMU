@@ -23,17 +23,20 @@ export function ListaEventos({
   contagens: Record<string, number>;
 }) {
   const [busca, setBusca] = useState("");
+  const [mostrarFuturas, setMostrarFuturas] = useState(true);
   const [pagina, setPagina] = useState(1);
+  const agora = new Date();
 
   const filtrados = eventos.filter(
     (e) =>
-      e.titulo.toLowerCase().includes(busca.toLowerCase()) ||
-      (e.local || "").toLowerCase().includes(busca.toLowerCase())
+      (mostrarFuturas || e.data <= agora) &&
+      (e.titulo.toLowerCase().includes(busca.toLowerCase()) ||
+        (e.local || "").toLowerCase().includes(busca.toLowerCase()))
   );
 
   useEffect(() => {
     setPagina(1);
-  }, [busca]);
+  }, [busca, mostrarFuturas]);
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
   const paginaSegura = Math.min(pagina, totalPaginas);
@@ -44,17 +47,28 @@ export function ListaEventos({
 
   return (
     <div className="space-y-3">
-      <div className="relative max-w-sm">
-        <Search
-          size={15}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-navy-950/35"
-        />
-        <input
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Procurar por título ou local..."
-          className="focus-ring w-full rounded-md border border-navy-900/15 bg-white py-2 pl-9 pr-3.5 text-[14px] placeholder:text-navy-950/35"
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm flex-1">
+          <Search
+            size={15}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-navy-950/35"
+          />
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Procurar por título ou local..."
+            className="focus-ring w-full rounded-md border border-navy-900/15 bg-white py-2 pl-9 pr-3.5 text-[14px] placeholder:text-navy-950/35"
+          />
+        </div>
+        <label className="inline-flex cursor-pointer items-center gap-2 text-[13.5px] font-medium text-navy-950/65">
+          <input
+            type="checkbox"
+            checked={mostrarFuturas}
+            onChange={(e) => setMostrarFuturas(e.target.checked)}
+            className="h-4 w-4 accent-navy-900"
+          />
+          Mostrar aulas futuras
+        </label>
       </div>
 
       <div className="rounded-xl border border-navy-900/10 bg-white">

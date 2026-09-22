@@ -100,6 +100,7 @@ export default async function AdminEventoDetalhe({ params }: { params: { id: str
         totalEventos={totalEventos}
         mostrarAuditoria
         bloqueado={!podeMarcar}
+        bloqueioFuturo={eventoFuturo}
       />
     </div>
   );
