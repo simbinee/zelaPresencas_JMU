@@ -12,6 +12,23 @@ async function requireAdmin() {
   }
 }
 
+function normalizarNome(nome: string) {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+async function nomeCandidatoJaExiste(nome: string, ignorarId?: string) {
+  const candidatos = await prisma.candidato.findMany({
+    where: ignorarId ? { id: { not: ignorarId } } : undefined,
+    select: { id: true, nome: true },
+  });
+  return candidatos.some((candidato) => normalizarNome(candidato.nome) === normalizarNome(nome));
+}
+
 export async function criarCandidatoAction(formData: FormData) {
   await requireAdmin();
 
@@ -20,6 +37,10 @@ export async function criarCandidatoAction(formData: FormData) {
   const turmaId = String(formData.get("turmaId") || "").trim();
 
   if (!nome) return;
+
+  if (await nomeCandidatoJaExiste(nome)) {
+    throw new Error("Já existe um candidato com este nome completo.");
+  }
 
   await prisma.candidato.create({
     data: { nome, contacto: contacto || null, turmaId: turmaId || null },
@@ -69,6 +90,10 @@ export async function atualizarCandidatoAction(formData: FormData) {
 
   if (!id || !nome) return;
 
+  if (await nomeCandidatoJaExiste(nome, id)) {
+    throw new Error("Já existe outro candidato com este nome completo.");
+  }
+
   await prisma.candidato.update({
     where: { id },
     data: { nome, contacto: contacto || null, turmaId: turmaId || null },
@@ -107,6 +132,15 @@ export async function criarCandidatosEmMassaAction(
       turmaId: turmaId || null,
     };
   });
+
+  const nomes = new Set<string>();
+  for (const candidato of dados) {
+    const nomeNormalizado = normalizarNome(candidato.nome);
+    if (nomes.has(nomeNormalizado) || (await nomeCandidatoJaExiste(candidato.nome))) {
+      return { error: `O candidato "${candidato.nome}" já está registado ou aparece duplicado na lista.` };
+    }
+    nomes.add(nomeNormalizado);
+  }
 
   await prisma.candidato.createMany({ data: dados });
 

@@ -13,6 +13,15 @@ async function requireAdmin() {
   }
 }
 
+function normalizarNome(nome: string) {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 export type CriarResponsavelState = { error?: string; success?: string } | null;
 
 export async function criarResponsavelAction(
@@ -27,6 +36,14 @@ export async function criarResponsavelAction(
 
   if (!nome || !username || !password) {
     return { error: "Preenche todos os campos." };
+  }
+
+  const responsaveis = await prisma.user.findMany({
+    where: { role: Role.RESPONSAVEL },
+    select: { nome: true },
+  });
+  if (responsaveis.some((responsavel) => normalizarNome(responsavel.nome) === normalizarNome(nome))) {
+    return { error: "Já existe um responsável com este nome completo." };
   }
   if (password.length < 6) {
     return { error: "A palavra-passe deve ter pelo menos 6 caracteres." };

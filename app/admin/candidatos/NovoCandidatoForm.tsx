@@ -52,8 +52,13 @@ export function NovoCandidatoForm({ turmas }: { turmas: TurmaParaSelecao[] }) {
             mostrarToast(`${fd.get("nome")} adicionado(a) com sucesso.`, "sucesso");
             formRef.current?.reset();
             setAberto(false);
-          } catch {
-            mostrarToast("Não foi possível adicionar o candidato. Tenta novamente.", "erro");
+          } catch (error) {
+            mostrarToast(
+              error instanceof Error
+                ? error.message
+                : "Não foi possível adicionar o candidato. Tenta novamente.",
+              "erro"
+            );
           }
         }}
         className="grid gap-4 sm:grid-cols-3"
