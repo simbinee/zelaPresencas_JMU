@@ -6,16 +6,20 @@ import { TurmaBarChart } from "./TurmaBarChart";
 const LIMIAR_RISCO = 75;
 
 export default async function RelatoriosPage() {
-  const candidatos = await prisma.candidato.findMany({
-    where: { status: "ATIVO" },
-    orderBy: { nome: "asc" },
-    include: {
-      attendances: { where: { presente: true } },
-      turma: { include: { anoLetivo: true } },
-    },
-  });
-
-  const totalEventos = await prisma.evento.count();
+  const agora = new Date();
+  const [candidatos, totalEventos] = await Promise.all([
+    prisma.candidato.findMany({
+      where: { status: "ATIVO" },
+      orderBy: { nome: "asc" },
+      include: {
+        attendances: {
+          where: { presente: true, evento: { data: { lte: agora } } },
+        },
+        turma: { include: { anoLetivo: true } },
+      },
+    }),
+    prisma.evento.count({ where: { data: { lte: agora } } }),
+  ]);
 
   const linhas = candidatos
     .map((c) => ({
@@ -33,6 +37,9 @@ export default async function RelatoriosPage() {
       : 0;
 
   const totalEmRisco = linhas.filter((l) => l.percentagem < LIMIAR_RISCO).length;
+  const totalEmDia = linhas.filter((l) => l.percentagem >= 75).length;
+  const totalEmAtencao = linhas.filter((l) => l.percentagem >= 40 && l.percentagem < 75).length;
+  const totalCriticos = linhas.filter((l) => l.percentagem < 40).length;
 
   const porTurma = new Map<string, number[]>();
   for (const l of linhas) {
@@ -46,6 +53,7 @@ export default async function RelatoriosPage() {
       media: Math.round(valores.reduce((a, b) => a + b, 0) / valores.length),
     }))
     .sort((a, b) => b.media - a.media);
+  const melhorTurma = dadosTurma[0];
 
   return (
     <div className="space-y-6">
@@ -54,12 +62,12 @@ export default async function RelatoriosPage() {
           Relatórios
         </h1>
         <p className="mt-1.5 text-[15px] text-navy-950/55">
-          Assiduidade de cada candidato ao longo de todos os eventos registados.
+          Assiduidade dos candidatos nos eventos que já começaram.
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Eventos considerados" valor={totalEventos} />
+        <StatCard label="Eventos realizados" valor={totalEventos} />
         <StatCard label="Candidatos ativos" valor={linhas.length} />
         <StatCard label="Assiduidade média" valor={`${mediaGeral}%`} destaque />
         <StatCard
@@ -69,9 +77,44 @@ export default async function RelatoriosPage() {
         />
       </div>
 
+      {linhas.length > 0 && totalEventos > 0 && (
+        <section className="overflow-hidden rounded-xl bg-navy-950 text-white">
+          <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+            <div className="max-w-xl">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-parchment-100/50">
+                Leitura executiva
+              </p>
+              <h2 className="mt-1 font-display text-xl font-semibold">Acompanhamento da assiduidade</h2>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-parchment-100/65">
+                {totalCriticos > 0
+                  ? `${totalCriticos} candidato(s) precisam de atenção imediata; ${totalEmDia} mantêm uma assiduidade de pelo menos 75%.`
+                  : `${totalEmDia} candidato(s) mantêm uma assiduidade de pelo menos 75%.`}
+                {melhorTurma
+                  ? ` A turma ${melhorTurma.turma} apresenta a melhor média neste período.`
+                  : ""}
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-5 border-t border-white/10 pt-4 lg:min-w-[330px] lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+              <div>
+                <p className="text-2xl font-semibold text-emerald-300">{totalEmDia}</p>
+                <p className="mt-1 text-[11.5px] text-parchment-100/50">Em dia</p>
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-gold-400">{totalEmAtencao}</p>
+                <p className="mt-1 text-[11.5px] text-parchment-100/50">A acompanhar</p>
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-flame-400">{totalCriticos}</p>
+                <p className="mt-1 text-[11.5px] text-parchment-100/50">Prioridade</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {linhas.length === 0 || totalEventos === 0 ? (
         <div className="rounded-xl border border-navy-900/10 bg-white px-5 py-10 text-center text-[14px] text-navy-950/45">
-          Ainda não há dados suficientes. Cria eventos e regista presenças para veres o relatório aqui.
+          Ainda não há dados suficientes. Depois de um evento começar, regista presenças para veres o relatório aqui.
         </div>
       ) : (
         <>

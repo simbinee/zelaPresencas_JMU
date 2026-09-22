@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, TriangleAlert, Download } from "lucide-react";
+import { Search, Download } from "lucide-react";
 
 type Linha = {
   id: string;
@@ -45,8 +45,6 @@ export function TabelaRelatorios({
       .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [linhas, anoSelecionado]);
 
-  const emRisco = linhas.filter((l) => l.percentagem < LIMIAR_RISCO);
-
   const filtrados = linhas.filter((l) => {
     const combinaBusca = l.nome.toLowerCase().includes(busca.toLowerCase());
     const combinaAno = !anoSelecionado || l.turma?.anoLetivo.id === anoSelecionado;
@@ -55,7 +53,7 @@ export function TabelaRelatorios({
   });
 
   function exportarCsv() {
-    const cabecalho = ["Nome", "Turma", "Ano letivo", "Presenças", "Total de eventos", "Assiduidade (%)"];
+    const cabecalho = ["Nome", "Turma", "Ano letivo", "Presenças", "Eventos realizados", "Assiduidade (%)"];
     const linhasCsv = linhas.map((l) => [
       l.nome,
       l.turma?.nome || "",
@@ -78,28 +76,6 @@ export function TabelaRelatorios({
 
   return (
     <div className="space-y-4">
-      {emRisco.length > 0 && (
-        <div className="rounded-xl border border-flame-500/25 bg-flame-500/[0.05] p-4">
-          <div className="mb-2 flex items-center gap-2 text-flame-600">
-            <TriangleAlert size={16} />
-            <p className="text-[13.5px] font-medium">
-              {emRisco.length} candidato(s) com assiduidade abaixo de {LIMIAR_RISCO}%
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {emRisco.map((l) => (
-              <Link
-                key={l.id}
-                href={`/admin/candidatos/${l.id}`}
-                className="focus-ring rounded-full bg-white px-3 py-1 text-[12.5px] font-medium text-flame-700 hover:bg-flame-50"
-              >
-                {l.nome} · {l.percentagem}%
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[220px] flex-1">
           <Search
