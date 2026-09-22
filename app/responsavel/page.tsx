@@ -5,7 +5,10 @@ import { contarPresencasPorEvento } from "@/lib/contagens";
 
 export default async function ResponsavelEventosPage() {
   const [eventos, totalCandidatos, contagens] = await Promise.all([
-    prisma.evento.findMany({ orderBy: { data: "desc" } }),
+    prisma.evento.findMany({
+      where: { data: { lte: new Date() } },
+      orderBy: { data: "desc" },
+    }),
     prisma.candidato.count({ where: { status: "ATIVO" } }),
     contarPresencasPorEvento(),
   ]);

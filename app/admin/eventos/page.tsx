@@ -9,6 +9,15 @@ export default async function EventosPage() {
     prisma.evento.findMany({ orderBy: { data: "desc" } }),
     contarPresencasPorEvento(),
   ]);
+  const agora = new Date();
+  const eventosOrdenados = [...eventos].sort((a, b) => {
+    const aFuturo = a.data > agora;
+    const bFuturo = b.data > agora;
+    if (aFuturo !== bFuturo) return aFuturo ? 1 : -1;
+    return aFuturo
+      ? a.data.getTime() - b.data.getTime()
+      : b.data.getTime() - a.data.getTime();
+  });
 
   return (
     <div className="space-y-6">
@@ -28,12 +37,12 @@ export default async function EventosPage() {
         <NovoAulasForm />
       </div>
 
-      {eventos.length === 0 ? (
+      {eventosOrdenados.length === 0 ? (
         <div className="rounded-xl border border-navy-900/10 bg-white px-5 py-10 text-center text-[14px] text-navy-950/45">
           Ainda não criaste nenhum evento.
         </div>
       ) : (
-        <ListaEventos eventos={eventos} contagens={contagens} />
+        <ListaEventos eventos={eventosOrdenados} contagens={contagens} />
       )}
     </div>
   );

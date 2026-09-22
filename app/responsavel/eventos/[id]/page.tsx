@@ -2,13 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { contarPresencasPorCandidato } from "@/lib/contagens";
-import { eventoJaTerminou } from "@/lib/eventos";
+import { eventoAindaNaoComecou, eventoJaTerminou } from "@/lib/eventos";
 import { ListaPresenca } from "./ListaPresenca";
 import { ChevronLeft } from "lucide-react";
 
 export default async function MarcarPresencaPage({ params }: { params: { id: string } }) {
   const evento = await prisma.evento.findUnique({ where: { id: params.id } });
   if (!evento) notFound();
+  if (eventoAindaNaoComecou(evento.data)) notFound();
 
   const [candidatos, totalEventos, presencasPorCandidato] = await Promise.all([
     prisma.candidato.findMany({

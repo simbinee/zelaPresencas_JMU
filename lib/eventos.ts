@@ -9,3 +9,7 @@ export function eventoJaTerminou(dataEvento: Date, agora: Date = new Date()): bo
   fimDoDia.setHours(23, 59, 59, 999);
   return fimDoDia.getTime() < agora.getTime();
 }
+
+export function eventoAindaNaoComecou(dataEvento: Date, agora: Date = new Date()): boolean {
+  return new Date(dataEvento).getTime() > agora.getTime();
+}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { contarPresencasPorCandidato } from "@/lib/contagens";
-import { eventoJaTerminou } from "@/lib/eventos";
+import { eventoAindaNaoComecou, eventoJaTerminou } from "@/lib/eventos";
 import { EditarEventoForm } from "./EditarEventoForm";
 import { ApagarEventoBotao } from "../ApagarEventoBotao";
 import { AlternarMarcacaoAtrasada } from "./AlternarMarcacaoAtrasada";
@@ -29,8 +29,9 @@ export default async function AdminEventoDetalhe({ params }: { params: { id: str
     contarPresencasPorCandidato(),
   ]);
 
+  const eventoFuturo = eventoAindaNaoComecou(evento.data);
   const eventoJaPassou = eventoJaTerminou(evento.data);
-  const podeMarcar = !eventoJaPassou || evento.permiteMarcacaoAtrasada;
+  const podeMarcar = !eventoFuturo && (!eventoJaPassou || evento.permiteMarcacaoAtrasada);
 
   const candidatosComPresenca = candidatos.map((c) => {
     const marcacao = c.attendances[0];
@@ -74,12 +75,16 @@ export default async function AdminEventoDetalhe({ params }: { params: { id: str
           )}
         </div>
         <div className="flex items-center gap-2">
-          {eventoJaPassou && (
+          {eventoFuturo ? (
+            <span className="rounded-md bg-navy-950/5 px-3 py-2 text-[13px] font-medium text-navy-950/55">
+              Marcação disponível na hora da aula
+            </span>
+          ) : eventoJaPassou ? (
             <AlternarMarcacaoAtrasada
               eventoId={evento.id}
               permiteMarcacaoAtrasadaInicial={evento.permiteMarcacaoAtrasada}
             />
-          )}
+          ) : null}
           <EditarEventoForm evento={evento} />
           <ApagarEventoBotao id={evento.id} />
         </div>

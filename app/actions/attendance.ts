@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { eventoJaTerminou } from "@/lib/eventos";
+import { eventoAindaNaoComecou, eventoJaTerminou } from "@/lib/eventos";
 
 async function garantirQuePodeMarcar(eventoId: string) {
   const evento = await prisma.evento.findUnique({
@@ -11,6 +11,10 @@ async function garantirQuePodeMarcar(eventoId: string) {
     select: { data: true, permiteMarcacaoAtrasada: true },
   });
   if (!evento) throw new Error("Evento não encontrado.");
+
+  if (eventoAindaNaoComecou(evento.data)) {
+    throw new Error("A marcação de presenças só fica disponível quando a aula começar.");
+  }
 
   const jaPassou = eventoJaTerminou(evento.data);
   if (jaPassou && !evento.permiteMarcacaoAtrasada) {
