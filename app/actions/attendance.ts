@@ -20,6 +20,16 @@ async function garantirQuePodeMarcar(eventoId: string) {
   }
 }
 
+async function garantirRegistosValidos(eventoId: string, candidatoIds: string[]) {
+  const [evento, candidatos] = await Promise.all([
+    prisma.evento.findUnique({ where: { id: eventoId }, select: { id: true } }),
+    prisma.candidato.findMany({ where: { id: { in: candidatoIds } }, select: { id: true } }),
+  ]);
+  if (!evento || candidatos.length !== new Set(candidatoIds).size) {
+    throw new Error("Evento ou candidato inválido.");
+  }
+}
+
 export async function marcarPresencaAction(
   eventoId: string,
   candidatoId: string,
@@ -29,6 +39,7 @@ export async function marcarPresencaAction(
   const session = await getSession();
   if (!session) throw new Error("Não autorizado.");
   await garantirQuePodeMarcar(eventoId);
+  await garantirRegistosValidos(eventoId, [candidatoId]);
 
   await prisma.attendance.upsert({
     where: { eventoId_candidatoId: { eventoId, candidatoId } },
@@ -54,7 +65,11 @@ export async function marcarTodosAction(
 ) {
   const session = await getSession();
   if (!session) throw new Error("Não autorizado.");
+  if (candidatoIds.length === 0 || candidatoIds.length > 500) {
+    throw new Error("Lista de candidatos inválida.");
+  }
   await garantirQuePodeMarcar(eventoId);
+  await garantirRegistosValidos(eventoId, candidatoIds);
 
   await prisma.$transaction(
     candidatoIds.map((candidatoId) =>
@@ -75,6 +90,7 @@ export async function removerMarcacaoAction(eventoId: string, candidatoId: strin
   const session = await getSession();
   if (!session) throw new Error("Não autorizado.");
   await garantirQuePodeMarcar(eventoId);
+  await garantirRegistosValidos(eventoId, [candidatoId]);
 
   await prisma.attendance.deleteMany({ where: { eventoId, candidatoId } });
 

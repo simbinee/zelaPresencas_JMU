@@ -5,8 +5,8 @@ export const COOKIE_NAME = "jmu_session";
 
 function getSecret() {
   const secret = process.env.AUTH_SECRET;
-  if (!secret) {
-    throw new Error("AUTH_SECRET não está definido nas variáveis de ambiente.");
+  if (!secret || secret.length < 32) {
+    throw new Error("AUTH_SECRET deve ter pelo menos 32 caracteres.");
   }
   return new TextEncoder().encode(secret);
 }
@@ -41,10 +41,17 @@ export async function destroySession() {
 export async function verifyToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecret());
+    if (
+      typeof payload.sub !== "string" ||
+      typeof payload.nome !== "string" ||
+      (payload.role !== "ADMIN" && payload.role !== "RESPONSAVEL")
+    ) {
+      return null;
+    }
     return {
-      sub: payload.sub as string,
-      nome: payload.nome as string,
-      role: payload.role as "ADMIN" | "RESPONSAVEL",
+      sub: payload.sub,
+      nome: payload.nome,
+      role: payload.role,
     };
   } catch {
     return null;

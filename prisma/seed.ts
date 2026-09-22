@@ -3,33 +3,51 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+function requiredEnv(name: string) {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`A variável ${name} é obrigatória para executar o seed.`);
+  return value;
+}
+
 async function main() {
-  const adminPass = await bcrypt.hash("admin123", 10);
-  const respPass = await bcrypt.hash("responsavel123", 10);
+  const adminUsername = requiredEnv("SEED_ADMIN_USERNAME");
+  const adminPassword = requiredEnv("SEED_ADMIN_PASSWORD");
+  const responsavelUsername = requiredEnv("SEED_RESPONSAVEL_USERNAME");
+  const responsavelPassword = requiredEnv("SEED_RESPONSAVEL_PASSWORD");
+  const adminPass = await bcrypt.hash(adminPassword, 12);
+  const admin2Pass = await bcrypt.hash(responsavelPassword, 12);
 
   await prisma.user.upsert({
-    where: { username: "admin" },
-    update: {},
+    where: { username: adminUsername },
+    update: {
+      nome: "Administrador JMU",
+      passwordHash: adminPass,
+      role: Role.ADMIN,
+    },
     create: {
       nome: "Administrador JMU",
-      username: "admin",
+      username: adminUsername,
       passwordHash: adminPass,
       role: Role.ADMIN,
     },
   });
 
   await prisma.user.upsert({
-    where: { username: "responsavel" },
-    update: {},
+    where: { username: responsavelUsername },
+    update: {
+      nome: "Responsável de Turma",
+      passwordHash: admin2Pass,
+      role: Role.RESPONSAVEL,
+    },
     create: {
       nome: "Responsável de Turma",
-      username: "responsavel",
-      passwordHash: respPass,
+      username: responsavelUsername,
+      passwordHash: admin2Pass ,
       role: Role.RESPONSAVEL,
     },
   });
 
-  console.log("Utilizadores de teste criados: admin/admin123 e responsavel/responsavel123");
+  console.log("Utilizadores iniciais criados ou confirmados.");
 
   // Numa instalação nova (sem candidatos antigos para migrar), cria já o ano
   // letivo atual para o admin poder começar logo a criar turmas.

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NovoEventoForm } from "./NovoEventoForm";
+import { NovoAulasForm } from "./NovoAulasForm";
 import { ListaEventos } from "./ListaEventos";
 import { contarPresencasPorEvento } from "@/lib/contagens";
 
@@ -22,7 +23,10 @@ export default async function EventosPage() {
         </div>
       </div>
 
-      <NovoEventoForm />
+      <div className="flex flex-wrap gap-3">
+        <NovoEventoForm />
+        <NovoAulasForm />
+      </div>
 
       {eventos.length === 0 ? (
         <div className="rounded-xl border border-navy-900/10 bg-white px-5 py-10 text-center text-[14px] text-navy-950/45">

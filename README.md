@@ -33,29 +33,34 @@ git push -u origin main
 1. Na Vercel, clica em **Add New → Project** e escolhe o repositório.
 2. Em **Environment Variables**, adiciona:
    - `DATABASE_URL` → a connection string do passo 1
-   - `AUTH_SECRET` → qualquer frase longa e aleatória (ex: gera uma em
-     https://generate-secret.vercel.app/32)
+   - `AUTH_SECRET` → uma chave aleatória com pelo menos 32 caracteres (não a
+     partilhes nem a comites no repositório)
 3. Clica em **Deploy**.
 
 ### 4. Criar as tabelas e os utilizadores iniciais
-Depois do primeiro deploy, no teu computador (com Node.js instalado):
+Depois do primeiro deploy, no teu computador (com Node.js instalado), define
+também quatro variáveis temporárias para o seed e executa:
 ```
 npm install
 echo "DATABASE_URL=cola-aqui-a-mesma-url" > .env
+echo "AUTH_SECRET=uma-chave-aleatoria-com-pelo-menos-32-caracteres" >> .env
+echo "SEED_ADMIN_USERNAME=admin" >> .env
+echo "SEED_ADMIN_PASSWORD=define-uma-palavra-passe-forte" >> .env
+echo "SEED_RESPONSAVEL_USERNAME=responsavel" >> .env
+echo "SEED_RESPONSAVEL_PASSWORD=define-outra-palavra-passe-forte" >> .env
 npx prisma db push
 npm run seed
 ```
-Isto cria a estrutura da base de dados e dois utilizadores de teste:
+Isto cria a estrutura da base de dados e dois utilizadores iniciais:
 
 | Utilizador    | Palavra-passe   | Papel        |
 |---------------|-----------------|--------------|
-| admin         | admin123        | Administrador|
-| responsavel   | responsavel123  | Responsável  |
+| valor de `SEED_ADMIN_USERNAME` | valor de `SEED_ADMIN_PASSWORD` | Administrador|
+| valor de `SEED_RESPONSAVEL_USERNAME` | valor de `SEED_RESPONSAVEL_PASSWORD` | Responsável  |
 
-**Muda estas palavras-passe assim que entrares** (podes criar novos
-responsáveis e apagar este, ou simplesmente avisar o utilizador `admin` da
-nova palavra-passe através da tua base de dados — no dia-a-dia, cria contas
-novas em "Responsáveis" no painel de administrador).
+Não coloques estas variáveis no GitHub. Depois da configuração inicial,
+remove-as do ambiente local ou substitui-as por valores seguros. No dia-a-dia,
+cria contas novas em "Responsáveis" no painel de administrador.
 
 ### 5. Usar amanhã
 - Entra como `admin` → cria o(s) evento(s) do dia em **Eventos**, adiciona
